@@ -1,0 +1,27 @@
+{
+  "name": "almenber-qrcode",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Private, offline QR code studio with logo customization",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && node scripts/prepare-offline.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "check": "npm test && npm run build",
+    "desktop": "node scripts/run-desktop.mjs",
+    "test:ui": "node scripts/run-desktop.mjs --smoke",
+    "test:offline": "node scripts/run-desktop.mjs --offline-smoke",
+    "build:desktop": "npm run build && electron-builder",
+    "build:desktop:linux": "npm run build && electron-builder --linux",
+    "build:desktop:win": "npm run build && electron-builder --win",
+    "android:sync": "npm run build && cap sync android",
+    "android:add": "cap add android",
+    "android:open": "cap open android"
+  },
+  "dependencies": { "qrcode": "1.5.4", "react": "19.2.7", "react-dom": "19.2.7" },
+  "devDependencies": { "@vitejs/plugin-react": "6.0.2", "vite": "8.0.16" },
+  "optionalDependencies": { "@capacitor/android": "8.4.1", "@capacitor/cli": "8.4.1", "@capacitor/core": "8.4.1", "electron": "42.4.1", "electron-builder": "26.15.3" }
+}

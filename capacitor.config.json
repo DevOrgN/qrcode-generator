@@ -1,0 +1,6 @@
+{
+  "appId": "com.almenber.qrcode",
+  "appName": "Almenber QR Code",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

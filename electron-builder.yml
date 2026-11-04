@@ -1,0 +1,9 @@
+appId: com.almenber.qrcode
+productName: Almenber QR Code
+directories:
+  output: release
+files:
+  - electron/main.cjs
+  - dist/**/*
+  - package.json
+asar: true
