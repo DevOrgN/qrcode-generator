@@ -271,6 +271,40 @@ async function rasterWithLogo(dataUrl, logo, size) {
   return canvas.toDataURL('image/png');
 }
 
+function rasterQR(text, options) {
+  const matrix = QRCode.create(text, { errorCorrectionLevel: options.level });
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = options.size;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('PNG export is unavailable because canvas could not be created.');
+  context.fillStyle = options.background;
+  context.fillRect(0, 0, options.size, options.size);
+
+  // Paint module runs directly onto the requested integer canvas. qrcode's
+  // browser renderer floors its scaled canvas dimension, which can drop the
+  // final pixel at otherwise valid export sizes.
+  const modules = matrix.modules;
+  const total = modules.size + options.margin * 2;
+  const scale = options.size / total;
+  context.fillStyle = options.foreground;
+  for (let row = 0; row < modules.size; row += 1) {
+    let start = -1;
+    for (let column = 0; column <= modules.size; column += 1) {
+      const dark = column < modules.size && modules.data[row * modules.size + column];
+      if (dark && start < 0) start = column;
+      if (!dark && start >= 0) {
+        const left = Math.floor((options.margin + start) * scale);
+        const right = Math.floor((options.margin + column) * scale);
+        const top = Math.floor((options.margin + row) * scale);
+        const bottom = Math.floor((options.margin + row + 1) * scale);
+        context.fillRect(left, top, right - left, bottom - top);
+        start = -1;
+      }
+    }
+  }
+  return canvas.toDataURL('image/png');
+}
+
 export async function generateQR(text, options = {}) {
   const settings = { ...DEFAULT_OPTIONS, ...options };
   const level = settings.logo ? 'H' : levelKey(settings.errorCorrectionLevel);
@@ -287,7 +321,9 @@ export async function generateQR(text, options = {}) {
   let svg;
   try { svg = await QRCode.toString(text, { ...qrOptions, type: 'svg' }); }
   catch { throw new Error('Could not generate this QR code. Shorten the text or choose a supported correction level.'); }
-  const dataUrl = await QRCode.toDataURL(text, { ...qrOptions, type: 'image/png' });
+  const dataUrl = typeof document !== 'undefined'
+    ? rasterQR(text, { level, margin, size, foreground, background })
+    : await QRCode.toDataURL(text, { ...qrOptions, type: 'image/png' });
   if (logo) {
     if (typeof document === 'undefined') throw new Error('PNG export with a logo requires a browser canvas.');
     const png = await rasterWithLogo(dataUrl, logo, size);

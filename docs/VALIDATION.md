@@ -16,6 +16,15 @@ source or visual assets were copied.
   matching PNG/SVG center logo rendering, and desktop/mobile overflow checks.
 - `npm run test:offline`: first production visit at `/qr/`, worker activation,
   complete server shutdown, offline reload, and generation of a new QR code.
+- Chromium browser scenarios on the production preview: URL and Arabic/emoji text,
+  byte capacity errors, real PNG logo upload and palette extraction, high-correction
+  logo mode, exact 512/1024/2048 PNG dimensions, reset/invalidation, real PNG and SVG
+  downloads, and image clipboard copy.
+- Responsive browser check at 430 CSS pixels: generated QR, input, actions and
+  settings render without horizontal overflow.
+- Local mobile Lighthouse run: performance 95, accessibility 100, best practices
+  100 and SEO 100. Lab scores vary with the machine; Lighthouse does not replace
+  real scanner or print testing.
 - Node syntax checks for the Electron shell and verification scripts.
 - Desktop and mobile screenshot review of the finished workspace.
 

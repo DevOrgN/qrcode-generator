@@ -5,15 +5,20 @@ import { generateQR } from '../src/lib/qr.js';
 test('logo SVG uses a transform from pixel coordinates into module coordinates', async () => {
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const previousImage = Object.getOwnPropertyDescriptor(globalThis, 'Image');
+  const canvases = [];
   class MockImage {
     naturalWidth = 64;
     naturalHeight = 64;
     set src(_value) { queueMicrotask(() => this.onload()); }
   }
-  const context = { drawImage() {}, beginPath() {}, roundRect() {}, fill() {} };
+  const context = { drawImage() {}, fillRect() {}, beginPath() {}, roundRect() {}, fill() {} };
   Object.defineProperty(globalThis, 'Image', { configurable: true, value: MockImage });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
-    createElement: () => ({ getContext: () => context, toDataURL: () => 'data:image/png;base64,AA==' }),
+    createElement: () => {
+      const canvas = { getContext: () => context, toDataURL: () => 'data:image/png;base64,AA==' };
+      canvases.push(canvas);
+      return canvas;
+    },
   } });
   const bytes = new Uint8Array(24);
   bytes.set([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -29,6 +34,7 @@ test('logo SVG uses a transform from pixel coordinates into module coordinates',
       assert.ok(scale, 'Logo must use module coordinates');
       assert.equal(Number(scale[1]) * size, Number(view[1]));
       assert.match(result.svg, /href="data:image\/png;base64,/);
+      assert.deepEqual(canvases.slice(-2).map(({ width, height }) => [width, height]), [[size, size], [size, size]]);
     }
   } finally {
     if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);

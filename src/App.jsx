@@ -201,7 +201,7 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Studio navigation">
-        <a className="brand" href="#main" aria-label="almenber QR Studio home">
+        <a className="brand" href="#main" aria-label="a. almenber CREATIVE TOOLS">
           <span className="brand-mark" aria-hidden="true">a.</span>
           <span className="brand-copy"><strong>almenber</strong><small>CREATIVE TOOLS</small></span>
         </a>
@@ -244,7 +244,7 @@ function App() {
 
               <section className="panel logo-panel">
                 <div className="panel-heading"><span className="step-number">02</span><div><h2>Make it yours</h2><p>Add a mark at the heart of your code.</p></div><span className="optional-pill">OPTIONAL</span></div>
-                {!logo && !uploading ? <button type="button" className={`dropzone ${dragging ? 'dragging' : ''}`} onClick={() => fileInput.current?.click()} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); acceptFile(event.dataTransfer.files?.[0]); }} aria-label="Upload a PNG or JPEG logo, or drop it here">
+                {!logo && !uploading ? <button type="button" className={`dropzone ${dragging ? 'dragging' : ''}`} onClick={() => fileInput.current?.click()} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); acceptFile(event.dataTransfer.files?.[0]); }}>
                   <span className="upload-icon"><Icon name="upload" size={19}/></span><span><strong>Drop your logo here</strong><small>or <u>browse files</u></small></span><span className="file-hint">PNG or JPG · up to 2 MB</span>
                 </button> : <div className="logo-loaded">
                   <span className="logo-thumb">{logo?.dataUrl ? <img src={logo.dataUrl} alt=""/> : <span className="upload-spinner"/>}</span>

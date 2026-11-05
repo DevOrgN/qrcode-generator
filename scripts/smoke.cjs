@@ -35,11 +35,11 @@ app.whenReady().then(async () => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, text);
         input.dispatchEvent(new Event('input', { bubbles: true }));
       };
-      const rendered = () => [...document.images].some(image => image.src.startsWith('data:image/png') && image.naturalWidth >= 512);
+      const rendered = () => [...document.images].some(image => image.src.startsWith('data:image/png') && image.naturalWidth === 1024);
       const download = () => [...document.querySelectorAll('button')].find(button => /download png/i.test(button.textContent));
       update('https://example.com/verification');
       await pause(900);
-      check(rendered(), 'QR preview did not render');
+      check(rendered(), '1024-pixel QR preview did not render at its exact export size');
       check(download() && !download().disabled, 'PNG download unavailable after render');
       update('');
       await pause(100);
@@ -47,8 +47,16 @@ app.whenReady().then(async () => {
       update('مرحبا بالعالم — QR Studio');
       await pause(900);
       check(rendered() && !download().disabled, 'Unicode QR did not render');
+      const exportSizes = [];
+      for (const size of [512, 2048]) {
+        const option = [...document.querySelectorAll('.size-control button')].find(button => button.textContent.trim() === String(size));
+        option.click();
+        await pause(900);
+        check(document.querySelector('.qr-image')?.naturalWidth === size, String(size) + 'px QR export has the wrong dimensions');
+        exportSizes.push(size);
+      }
       const overflowDesktop = document.documentElement.scrollWidth > window.innerWidth;
-      return { title: document.title, overflowDesktop, checks: 4 };
+      return { title: document.title, overflowDesktop, checks: 4, exportSizes };
     })()`);
     assert.equal(result.overflowDesktop, false, 'Desktop horizontal overflow');
     await win.webContents.executeJavaScript(`(async () => {
@@ -112,7 +120,7 @@ app.whenReady().then(async () => {
       await fs.writeFile('/tmp/almenber-qr-mobile.png', (await win.webContents.capturePage()).toPNG());
     }
     assert.equal(failures.length, 0, 'Renderer emitted console errors');
-    console.log(`UI smoke passed: render, exports, clearing, Unicode, logo upload, SVG logo geometry, desktop/mobile layout.`);
+    console.log(`UI smoke passed: 512/1024/2048px generation, clearing, Unicode, logo upload, SVG logo geometry, desktop/mobile layout.`);
     clearTimeout(deadline);
     app.exit(0);
   } catch (error) {
