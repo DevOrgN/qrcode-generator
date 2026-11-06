@@ -1,6 +1,6 @@
 /* Production worker. The build helper replaces the precache marker with URLs
    derived from the finished build so first-visit installation is complete. */
-const CACHE_PREFIX = `almenber-qr-${new URL(self.registration.scope).pathname}-static-`;
+const CACHE_PREFIX = `custom-qrcode-generator-${new URL(self.registration.scope).pathname}-static-`;
 const CACHE_NAME = `${CACHE_PREFIX}v1`;
 const PRECACHE_URLS = self.__PRECACHE_URLS__ || [];
 

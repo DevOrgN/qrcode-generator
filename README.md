@@ -1,4 +1,4 @@
-# Almenber QR Studio
+# custom-qrcode-generator
 
 A private QR generator built with React, Vite and `qrcode`. All QR content and
 logo processing stays on the device. No accounts, analytics, remote fonts or
@@ -30,7 +30,7 @@ successful production visit and service worker installation. The development
 server does not install a service worker.
 
 With an installed Electron runtime, `npm run test:ui` checks the production
-interface and real logo exports; `npm run test:offline` checks first-visit caching
+interface, PNG generation and logo handling; `npm run test:offline` checks first-visit caching
 and generation after its local test server shuts down. On headless Linux, prefix
 these with `xvfb-run -a -s '-screen 0 1600x1200x24'`. These tests never install a
 browser. The desktop launcher checks for an existing binary without importing
@@ -40,22 +40,24 @@ the npm Electron launcher, which can trigger a binary download in some versions.
 
 - Text and URL QR codes with Unicode and byte-aware capacity validation.
 - Live preview; stale renders cannot be exported after editing.
-- PNG/JPEG center logos up to 2 MiB, bounded image dimensions, extracted palette.
-- Foreground/background colors, contrast guidance, correction levels L/M/Q/H.
-- PNG and self-contained SVG downloads at 512, 1024 or 2048 pixels.
-- Image clipboard and native file sharing when supported by the browser.
-- Responsive keyboard-accessible controls and a resettable, memory-only workspace.
+- Optional PNG/JPEG center logos up to 2 MiB, bounded image dimensions, and logo color sampling.
+- One editable QR color with a contrast reminder and automatically sampled logo colors.
+- Minimal monochrome controls with a persistent light/dark theme toggle.
+- 1024-pixel PNG downloads and native file sharing when supported by the browser.
+- Responsive keyboard-accessible controls; content remains in memory for the session.
 - Offline web use, hardened Electron shell and Capacitor Android configuration.
 
 QR capacity depends on encoding and correction level, rather than a universal
-character count. Byte-mode capacity ranges from 1,273 bytes at H to 2,953 at L;
-the encoder can fit more numeric/alphanumeric characters. Logos force H correction.
-A four-module quiet zone is retained. Test the final exported code on the devices
-and print size where it will be used, especially with logos or custom colors.
+character count. The app uses medium correction by default and high correction
+when a logo is added. Byte-mode capacity ranges from 1,273 bytes at H to 2,953 at
+L; the encoder can fit more numeric/alphanumeric characters. A four-module quiet
+zone is retained. Test the final exported code on the devices and print size
+where it will be used, especially with logos or custom colors.
 
-Clipboard requires a secure context and permission. File sharing depends on
-browser/device support. Unsupported actions provide download guidance. Reset
-clears the current content and logo; no content history is stored.
+File sharing depends on browser/device support. Unsupported actions provide
+download guidance. No content history is stored.
+
+See [user scenarios and verification](docs/WALKTHROUGH.md) for the recorded flows.
 
 ## Platforms and release
 

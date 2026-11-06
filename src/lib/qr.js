@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 
 export const DEFAULT_OPTIONS = Object.freeze({
-  foreground: '#173f35',
+  foreground: '#18181b',
   background: '#ffffff',
   size: 1024,
   errorCorrectionLevel: 'H',
@@ -176,7 +176,7 @@ function parseHexColor(value, name) {
   const color = String(value ?? '').trim();
   if (/^#[\da-f]{3}$/i.test(color)) return `#${[...color.slice(1)].map((c) => c + c).join('')}`.toLowerCase();
   if (/^#[\da-f]{6}$/i.test(color)) return color.toLowerCase();
-  throw new Error(`${name} must be a 3- or 6-digit hex color (for example #173f35).`);
+  throw new Error(`${name} must be a 3- or 6-digit hex color (for example #18181b).`);
 }
 
 function rgb(color) {

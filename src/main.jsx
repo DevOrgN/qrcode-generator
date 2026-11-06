@@ -14,7 +14,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error) {
-    console.error('QR Studio encountered an error.', error);
+    console.error('Custom QR encountered an error.', error);
   }
 
   render() {
@@ -22,8 +22,6 @@ class ErrorBoundary extends React.Component {
       return (
         <main className="fatal-screen">
           <div className="fatal-card">
-            <span className="brand-mark" aria-hidden="true">a.</span>
-            <p className="eyebrow">ALMENBER / QR STUDIO</p>
             <h1>Something went wrong.</h1>
             <p>Your workspace couldn’t be opened. Refresh the page to try again.</p>
             <button className="button button-primary" onClick={() => window.location.reload()}>Refresh workspace</button>

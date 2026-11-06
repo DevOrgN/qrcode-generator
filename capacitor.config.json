@@ -1,6 +1,6 @@
 {
-  "appId": "com.almenber.qrcode",
-  "appName": "Almenber QR Code",
+  "appId": "com.customqr.generator",
+  "appName": "Custom QR Code Generator",
   "webDir": "dist",
   "bundledWebRuntime": false
 }

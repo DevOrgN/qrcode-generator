@@ -1,5 +1,5 @@
-appId: com.almenber.qrcode
-productName: Almenber QR Code
+appId: com.customqr.generator
+productName: Custom QR Code Generator
 directories:
   output: release
 files:

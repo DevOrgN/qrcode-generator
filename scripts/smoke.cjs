@@ -3,7 +3,6 @@ const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
-const os = require('node:os');
 
 app.disableHardwareAcceleration();
 const deadline = setTimeout(() => {
@@ -44,19 +43,11 @@ app.whenReady().then(async () => {
       update('');
       await pause(100);
       check(download().disabled, 'Export retained stale content after clearing input');
-      update('مرحبا بالعالم — QR Studio');
+      update('مرحبا بالعالم — Custom QR');
       await pause(900);
       check(rendered() && !download().disabled, 'Unicode QR did not render');
-      const exportSizes = [];
-      for (const size of [512, 2048]) {
-        const option = [...document.querySelectorAll('.size-control button')].find(button => button.textContent.trim() === String(size));
-        option.click();
-        await pause(900);
-        check(document.querySelector('.qr-image')?.naturalWidth === size, String(size) + 'px QR export has the wrong dimensions');
-        exportSizes.push(size);
-      }
       const overflowDesktop = document.documentElement.scrollWidth > window.innerWidth;
-      return { title: document.title, overflowDesktop, checks: 4, exportSizes };
+      return { title: document.title, overflowDesktop, checks: 3 };
     })()`);
     assert.equal(result.overflowDesktop, false, 'Desktop horizontal overflow');
     await win.webContents.executeJavaScript(`(async () => {
@@ -78,49 +69,17 @@ app.whenReady().then(async () => {
       const center = ctx.getImageData(32, 32, 1, 1).data;
       if (center[0] < 220 || center[1] > 70) throw new Error('PNG center logo missing');
     })()`);
-    const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'qr-smoke-'));
-    const saved = path.join(temporary, 'qr.svg');
-    const downloaded = new Promise((resolve, reject) => {
-      win.webContents.session.once('will-download', (_event, item) => {
-        item.setSavePath(saved);
-        item.once('done', (_event, state) => state === 'completed' ? resolve() : reject(new Error('SVG download failed')));
-      });
-    });
-    await win.webContents.executeJavaScript(`(() => {
-      [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'SVG').click();
-    })()`);
-    await win.webContents.executeJavaScript(`(() => {
-      [...document.querySelectorAll('button')].find(button => /download svg/i.test(button.textContent)).click();
-    })()`);
-    await Promise.race([downloaded, new Promise((_, reject) => setTimeout(() => reject(new Error('SVG download timed out')), 5000))]);
-    const svg = await fs.readFile(saved, 'utf8');
-    await fs.rm(temporary, { recursive: true, force: true });
-    const viewBox = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg);
-    const image = /<image[^>]+x="([\d.]+)"[^>]+y="([\d.]+)"[^>]+width="([\d.]+)"/.exec(svg);
-    assert.ok(viewBox && image, 'SVG must contain embedded logo');
-    const scale = Number(/<g transform="scale\(([\d.]+)\)"/.exec(svg)?.[1] || 1);
-    assert.ok((Number(image[1]) + Number(image[3])) * scale <= Number(viewBox[1]), 'SVG logo must fit inside QR viewBox');
-    const vectorCenter = await win.webContents.executeJavaScript(`(async () => {
-      const image = new Image();
-      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(${JSON.stringify(svg)});
-      await image.decode();
-      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
-      const context = canvas.getContext('2d'); context.drawImage(image, 0, 0, 128, 128);
-      const pixel = context.getImageData(64, 64, 1, 1).data;
-      return pixel[0] > 220 && pixel[1] < 70;
-    })()`);
-    assert.ok(vectorCenter, 'SVG center logo must rasterize in the same position as PNG');
     if (process.argv.includes('--screenshots')) {
-      await fs.writeFile('/tmp/almenber-qr-desktop.png', (await win.webContents.capturePage()).toPNG());
+      await fs.writeFile('/tmp/custom-qrcode-generator-desktop.png', (await win.webContents.capturePage()).toPNG());
     }
     win.setSize(390, 844);
     const mobile = await win.webContents.executeJavaScript(`new Promise(resolve => setTimeout(() => resolve(document.documentElement.scrollWidth <= window.innerWidth), 250))`);
     assert.equal(mobile, true, 'Mobile horizontal overflow');
     if (process.argv.includes('--screenshots')) {
-      await fs.writeFile('/tmp/almenber-qr-mobile.png', (await win.webContents.capturePage()).toPNG());
+      await fs.writeFile('/tmp/custom-qrcode-generator-mobile.png', (await win.webContents.capturePage()).toPNG());
     }
     assert.equal(failures.length, 0, 'Renderer emitted console errors');
-    console.log(`UI smoke passed: 512/1024/2048px generation, clearing, Unicode, logo upload, SVG logo geometry, desktop/mobile layout.`);
+    console.log(`UI smoke passed: 1024px PNG generation, clearing, Unicode, logo upload, desktop/mobile layout.`);
     clearTimeout(deadline);
     app.exit(0);
   } catch (error) {

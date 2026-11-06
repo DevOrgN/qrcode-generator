@@ -5,7 +5,7 @@ Build fresh source from the prototype's documented feature inventory. Do not cop
 ## Assignments
 
 - Luna high: `src/lib/qr.js`, `tests/qr.test.js`. QR payload validation, byte-aware capacity, color/contrast, logo decoding/palette, PNG and SVG rendering, download/copy/share helpers.
-- Luna high: `src/App.jsx`, `src/components/*`, `src/styles.css`, `src/main.jsx`, `index.html`, `public/favicon.svg`. Responsive accessible QR studio, content/logo/customization controls, debounced race-safe rendering, export actions and errors.
+- Luna high: `src/App.jsx`, `src/components/*`, `src/styles.css`, `src/main.jsx`, `index.html`, `public/favicon.svg`. Responsive accessible QR generator, content/logo/customization controls, debounced race-safe rendering, export actions and errors.
 - Luna medium: `electron/main.cjs`, `capacitor.config.json`, `public/sw.js`, `public/manifest.webmanifest`, `scripts/*`, `docs/PLATFORMS.md`. Hardened local wrappers, offline static build support, platform setup guidance without downloads.
 - Coordinator: configuration, integration, dependency reuse, independent verification, documentation and local commits.
 

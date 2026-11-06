@@ -28,7 +28,7 @@ function fakeFile({ type = 'image/png', data = pngHeader(64, 32), size } = {}) {
 
 test('defaults define a conservative high correction QR configuration', () => {
   assert.deepEqual(DEFAULT_OPTIONS, {
-    foreground: '#173f35', background: '#ffffff', size: 1024,
+    foreground: '#18181b', background: '#ffffff', size: 1024,
     errorCorrectionLevel: 'H', margin: 4,
   });
 });
