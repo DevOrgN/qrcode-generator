@@ -157,14 +157,30 @@ test('complex palettes still return colors that occur in the original pixels', (
   assert.ok(colors.every(color => originals.has(color)));
 });
 
-test('native share availability requires PNG file support, not just a share method', { skip: typeof File === 'undefined' }, () => {
+test('native share availability checks for a share method without trusting canShare false negatives', { skip: typeof File === 'undefined' }, () => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const result = {dataUrl:'data:image/png;base64,AA=='};
   try {
     Object.defineProperty(globalThis, 'navigator', {configurable:true,value:{share:async()=>{},canShare:({files})=>files[0].type==='image/png'}});
     assert.equal(canShareQR(result), true);
     Object.defineProperty(globalThis, 'navigator', {configurable:true,value:{share:async()=>{},canShare:()=>false}});
-    assert.equal(canShareQR(result), false);
+    assert.equal(canShareQR(result), true);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'navigator', previous);
+    else delete globalThis.navigator;
+  }
+});
+
+test('shareQR calls native file sharing even when canShare rejects the payload', { skip: typeof File === 'undefined' }, async () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  let calls = 0;
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
+    canShare: () => false,
+    share: async payload => { calls++; assert.equal(payload.files[0].type, 'image/png'); },
+  } });
+  try {
+    await shareQR({ dataUrl: 'data:image/png;base64,AA==' });
+    assert.equal(calls, 1);
   } finally {
     if (previous) Object.defineProperty(globalThis, 'navigator', previous);
     else delete globalThis.navigator;

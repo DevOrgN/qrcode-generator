@@ -7,7 +7,6 @@ import {
   generateQR,
   downloadQR,
   shareQR,
-  copyQR,
   canShareQR,
 } from './lib/qr.js';
 
@@ -197,7 +196,7 @@ function App() {
           </div>
           <div className="action-row">
             <button type="button" className="button button-primary" disabled={!readyResult} onClick={() => doAction(current => downloadQR(current, 'png'), 'PNG downloaded.')}><Icon name="download" size={16}/>Download PNG</button>
-            <button type="button" className="button button-secondary" disabled={!readyResult} title={nativeSharing ? 'Share PNG with another app' : 'Share this QR code. This browser will copy the PNG so you can paste it into another app.'} onClick={() => doAction(nativeSharing ? shareQR : copyQR, nativeSharing ? 'QR code shared.' : 'PNG copied. Paste it into your message.')}><Icon name="share" size={16}/>Share</button>
+            <button type="button" className="button button-secondary" disabled={!readyResult} title={nativeSharing ? 'Share PNG with another app' : 'Native image sharing is unavailable. Download the PNG to share it manually.'} onClick={() => doAction(shareQR, 'QR code shared.')}><Icon name="share" size={16}/>Share</button>
           </div>
           <p className="status-message" role="status" aria-live="polite">{message}</p>
         </section>

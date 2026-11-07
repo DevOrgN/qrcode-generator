@@ -432,10 +432,7 @@ export async function copyQR(result) {
 
 export function canShareQR(result) {
   if (!result || typeof navigator === 'undefined' || typeof navigator.share !== 'function' || typeof File === 'undefined') return false;
-  try {
-    const file = new File([dataUrlBlob(result.dataUrl)], 'qr-code.png', { type: 'image/png' });
-    return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
-  } catch { return false; }
+  return true;
 }
 
 export async function shareQR(result) {
@@ -446,9 +443,6 @@ export async function shareQR(result) {
   if (typeof File === 'undefined') throw new Error('Sharing image files is not supported here. Download the PNG to share it manually.');
   const file = new File([dataUrlBlob(result.dataUrl)], 'qr-code.png', { type: 'image/png' });
   const payload = { title: 'QR code', files: [file] };
-  if (navigator.canShare && !navigator.canShare(payload)) {
-    throw new Error('This device cannot share QR image files. Download the PNG to share it manually.');
-  }
   try { await navigator.share(payload); return true; }
   catch (error) {
     if (error?.name === 'AbortError') return false;
