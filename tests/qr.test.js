@@ -5,6 +5,8 @@ import {
   byteLength,
   validateText,
   validateLogo,
+  extractLogoColors,
+  canShareQR,
   loadLogo,
   contrastRatio,
   generateQR,
@@ -49,15 +51,15 @@ test('byteLength counts UTF-8 bytes and text validation preserves input semantic
 
 test('logo metadata validation and image content checks enforce type, size, signature, and dimensions', async () => {
   assert.equal(validateLogo(fakeFile()), null);
-  assert.match(validateLogo(fakeFile({ type: 'image/gif' })), /PNG or JPEG/);
-  assert.match(validateLogo(fakeFile({ size: 2 * 1024 * 1024 + 1 })), /2 MiB/);
+  assert.match(validateLogo(fakeFile({ type: 'image/gif' })), /PNG or JPG/);
+  assert.match(validateLogo(fakeFile({ size: 20 * 1024 * 1024 + 1 })), /20 MB/);
   const loaded = await loadLogo(fakeFile());
   assert.equal(loaded.width, 64);
   assert.equal(loaded.height, 32);
   assert.match(loaded.dataUrl, /^data:image\/png;base64,/);
   assert.deepEqual(loaded.colors, []);
   await assert.rejects(loadLogo(fakeFile({ data: new Uint8Array([1, 2, 3, 4]) })), /content/);
-  await assert.rejects(loadLogo(fakeFile({ data: pngHeader(4097, 1) })), /dimensions/);
+  await assert.rejects(loadLogo(fakeFile({ data: pngHeader(16385, 1) })), /too large/);
 });
 
 test('contrast ratio uses WCAG relative luminance and rejects malformed colors', () => {
@@ -98,6 +100,55 @@ test('share cancellation is silent when file sharing is available', { skip: type
   });
   try {
     await assert.doesNotReject(shareQR({ dataUrl: 'data:image/png;base64,AA==' }));
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'navigator', previous);
+    else delete globalThis.navigator;
+  }
+});
+
+
+test('valid PNG signatures work with missing and generic MIME metadata', async () => {
+  for (const type of ['', 'application/octet-stream', 'image/x-png', 'image/jpeg']) {
+    const loaded = await loadLogo(fakeFile({ type }));
+    assert.match(loaded.dataUrl, /^data:image\/png;base64,/);
+  }
+});
+
+test('logo palette uses exact source RGB values and ignores transparent and rare pixels', () => {
+  const pixels = [];
+  for (let i = 0; i < 1000; i++) pixels.push(37, 59, 128, 255);
+  for (let i = 0; i < 400; i++) pixels.push(171, 53, 53, 255);
+  for (let i = 0; i < 400; i++) pixels.push(255, 255, 255, 0);
+  pixels.push(110, 110, 110, 255);
+  assert.deepEqual(extractLogoColors(pixels), ['#253b80', '#ab3535']);
+  assert.deepEqual(extractLogoColors([255,0,0,128,255,0,0,128]), ['#ff0000']);
+});
+
+test('native sharing capability rejects absent or unsupported file sharing', () => {
+  assert.equal(canShareQR(null), false);
+  assert.equal(canShareQR({dataUrl:'data:image/png;base64,AA=='}), false);
+});
+
+
+test('complex palettes still return colors that occur in the original pixels', () => {
+  const pixels = [], originals = new Set();
+  for (let i = 0; i < 256; i++) {
+    pixels.push(i, 37, 150, 255);
+    originals.add(`#${i.toString(16).padStart(2, '0')}2596`);
+  }
+  const colors = extractLogoColors(pixels);
+  assert.ok(colors.length > 1);
+  assert.ok(colors.every(color => originals.has(color)));
+});
+
+test('native share availability requires PNG file support, not just a share method', { skip: typeof File === 'undefined' }, () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const result = {dataUrl:'data:image/png;base64,AA=='};
+  try {
+    Object.defineProperty(globalThis, 'navigator', {configurable:true,value:{share:async()=>{},canShare:({files})=>files[0].type==='image/png'}});
+    assert.equal(canShareQR(result), true);
+    Object.defineProperty(globalThis, 'navigator', {configurable:true,value:{share:async()=>{},canShare:()=>false}});
+    assert.equal(canShareQR(result), false);
   } finally {
     if (previous) Object.defineProperty(globalThis, 'navigator', previous);
     else delete globalThis.navigator;

@@ -8,9 +8,9 @@ export const DEFAULT_OPTIONS = Object.freeze({
   margin: 4,
 });
 
-const MAX_LOGO_BYTES = 2 * 1024 * 1024;
-const MAX_LOGO_EDGE = 4096;
-const MAX_LOGO_PIXELS = 16_000_000;
+const MAX_LOGO_BYTES = 20 * 1024 * 1024;
+const MAX_LOGO_EDGE = 16384;
+const MAX_LOGO_PIXELS = 64_000_000;
 const MAX_LOGO_FRACTION = 0.18;
 const CAPACITY_BYTES = Object.freeze({ L: 2953, M: 2331, Q: 1663, H: 1273 });
 const MIME_BY_SIGNATURE = { png: 'image/png', jpeg: 'image/jpeg' };
@@ -59,11 +59,12 @@ function declaredMime(file) {
 export function validateLogo(file) {
   if (!file) return 'Choose a PNG or JPEG image.';
   const mime = declaredMime(file);
-  if (mime !== MIME_BY_SIGNATURE.png && mime !== MIME_BY_SIGNATURE.jpeg && mime !== 'image/jpg') {
-    return 'Logo must be a PNG or JPEG image.';
-  }
-  if (!Number.isFinite(file.size) || file.size <= 0) return 'Logo file is empty or unreadable.';
-  if (file.size > MAX_LOGO_BYTES) return 'Logo must be 2 MiB or smaller.';
+  const imageExtension = /\.(png|jpe?g)$/i.test(file.name || '');
+  const allowed = ['', 'application/octet-stream', 'binary/octet-stream', 'image/png', 'image/x-png', 'image/jpeg', 'image/jpg'];
+  // The signature below is authoritative; MIME metadata is often absent or generic.
+  if (!allowed.includes(mime) && !imageExtension) return 'Choose a PNG or JPG image.';
+  if (!Number.isFinite(file.size) || file.size <= 0) return 'This file is empty or unreadable.';
+  if (file.size > MAX_LOGO_BYTES) return 'Choose an image smaller than 20 MB.';
   return null;
 }
 
@@ -117,33 +118,51 @@ function fileDataUrl(bytes, mime) {
   return `data:${mime};base64,${bytesToBase64(bytes)}`;
 }
 
-function colorPalette(dataUrl, width, height) {
-  if (typeof document === 'undefined' || typeof Image === 'undefined') return [];
-  return new Promise((resolve) => {
-    const image = new Image();
-    image.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 32; canvas.height = 32;
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) return resolve([]);
-        context.drawImage(image, 0, 0, 32, 32);
-        const pixels = context.getImageData(0, 0, 32, 32).data;
-        const counts = new Map();
-        for (let i = 0; i < pixels.length; i += 4) {
-          if (pixels[i + 3] < 96) continue;
-          const r = Math.round(pixels[i] / 32) * 32;
-          const g = Math.round(pixels[i + 1] / 32) * 32;
-          const b = Math.round(pixels[i + 2] / 32) * 32;
-          const hex = `#${[r, g, b].map((v) => Math.min(v, 255).toString(16).padStart(2, '0')).join('')}`;
-          counts.set(hex, (counts.get(hex) || 0) + 1);
-        }
-        resolve([...counts].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([color]) => color));
-      } catch { resolve([]); }
-    };
-    image.onerror = () => reject(new Error('The selected logo is not a valid, decodable PNG or JPEG image.'));
-    image.src = dataUrl;
-  });
+// Return representative source pixels, never rounded bins or averaged colors.
+export function extractLogoColors(pixels, maximum = 5) {
+  const count = minimumAlpha => {
+    const counts = new Map();
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3] < minimumAlpha) continue;
+      const key = (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2];
+      counts.set(key, (counts.get(key) || 0) + pixels[i + 3] / 255);
+    }
+    return counts;
+  };
+  let counts = count(240);
+  if (!counts.size) counts = count(48);
+  const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
+  // Rank color families together, but display their most frequent original pixel.
+  // This handles JPEG noise and gradients without synthesizing a rounded swatch.
+  const families = new Map();
+  for (const [color, frequency] of counts) {
+    const key = ((color >> 21) << 6) | (((color >> 13) & 7) << 3) | ((color >> 5) & 7);
+    const family = families.get(key) || { color, weight: 0, frequency: 0 };
+    family.weight += frequency;
+    if (frequency > family.frequency) { family.color = color; family.frequency = frequency; }
+    families.set(key, family);
+  }
+  const chosen = [];
+  for (const { color, weight } of [...families.values()].sort((a, b) => b.weight - a.weight)) {
+    if (weight < total * 0.0025) continue;
+    const rgb = [color >> 16, (color >> 8) & 255, color & 255];
+    if (chosen.some(item => item.rgb.reduce((sum, channel, index) => sum + (channel - rgb[index]) ** 2, 0) < 36 ** 2)) continue;
+    chosen.push({ rgb, hex: `#${color.toString(16).padStart(6, '0')}` });
+    if (chosen.length === maximum) break;
+  }
+  return chosen.map(item => item.hex);
+}
+
+function colorPalette(image) {
+  const ratio = Math.min(1, 384 / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return [];
+  context.imageSmoothingEnabled = false;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return extractLogoColors(context.getImageData(0, 0, canvas.width, canvas.height).data);
 }
 
 export async function loadLogo(file) {
@@ -157,19 +176,21 @@ export async function loadLogo(file) {
   }
   const info = detectImage(source);
   if (!info) throw new Error('The file content is not a supported PNG or JPEG image.');
-  if (info.mime !== (declaredMime(file) === 'image/jpg' ? 'image/jpeg' : declaredMime(file))) {
-    throw new Error('The file extension or type does not match its image content.');
-  }
-  if (!checkDimensions(info)) throw new Error(`Logo dimensions must be at most ${MAX_LOGO_EDGE} × ${MAX_LOGO_EDGE} pixels and 16 megapixels.`);
-  const dataUrl = fileDataUrl(source, info.mime);
-  if (typeof Image !== 'undefined') {
-    const decoded = await loadImage(dataUrl);
-    if (decoded.naturalWidth !== info.width || decoded.naturalHeight !== info.height) {
-      throw new Error('Logo image dimensions do not match its content. Choose another image.');
-    }
-  }
-  const colors = await colorPalette(dataUrl, info.width, info.height);
-  return { dataUrl, width: info.width, height: info.height, colors };
+  if (!checkDimensions(info)) throw new Error('This image is too large to open safely. Choose an image under 64 megapixels.');
+  const sourceUrl = fileDataUrl(source, info.mime);
+  if (typeof Image === 'undefined') return { dataUrl: sourceUrl, width: info.width, height: info.height, colors: [] };
+  const image = await loadImage(sourceUrl);
+  // Browser decoding applies image orientation. Do not reject valid oriented images
+  // because their decoded width/height differ from the file header.
+  const colors = colorPalette(image);
+  const ratio = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('This browser could not prepare the image. Try another browser.');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return { dataUrl: canvas.toDataURL('image/png'), width: image.naturalWidth, height: image.naturalHeight, colors };
 }
 
 function parseHexColor(value, name) {
@@ -209,7 +230,7 @@ function imageInfoFromDataUrl(dataUrl) {
     if (typeof atob === 'function') decoded = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
     else decoded = new Uint8Array(Buffer.from(match[2], 'base64'));
   } catch { throw new Error('Logo image data is invalid. Remove the logo and select it again.'); }
-  if (decoded.length > MAX_LOGO_BYTES) throw new Error('Logo must be 2 MiB or smaller.');
+  if (decoded.length > MAX_LOGO_BYTES) throw new Error('Logo must be 20 MB or smaller.');
   const info = detectImage(decoded);
   if (!info || info.mime !== match[1].toLowerCase() || !checkDimensions(info)) {
     throw new Error('Logo image content or dimensions are invalid. Choose a PNG or JPEG within the size limits.');
@@ -374,6 +395,14 @@ export async function copyQR(result) {
     if (error?.name === 'NotAllowedError') throw new Error('Clipboard access was denied. Allow clipboard access or download the PNG.');
     throw new Error('Could not copy the QR image. Try downloading the PNG instead.');
   }
+}
+
+export function canShareQR(result) {
+  if (!result || typeof navigator === 'undefined' || typeof navigator.share !== 'function' || typeof File === 'undefined') return false;
+  try {
+    const file = new File([dataUrlBlob(result.dataUrl)], 'qr-code.png', { type: 'image/png' });
+    return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+  } catch { return false; }
 }
 
 export async function shareQR(result) {

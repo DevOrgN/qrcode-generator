@@ -8,6 +8,8 @@ import {
   generateQR,
   downloadQR,
   shareQR,
+  copyQR,
+  canShareQR,
 } from './lib/qr.js';
 
 function Icon({ name, size = 18, ...props }) {
@@ -17,6 +19,7 @@ function Icon({ name, size = 18, ...props }) {
     download: <><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 17v3h14v-3"/></>,
     share: <><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.5-4.4m-7.5 7 7.5 4.4"/></>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
+    copy: <><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></>,
     sparkle: <><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></>,
   };
   return <svg {...common}>{paths[name] || null}</svg>;
@@ -27,7 +30,6 @@ function App() {
     try { return localStorage.getItem('qr-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
     catch { return 'light'; }
   });
-  const [colorOpen, setColorOpen] = useState(false);
   const [colorDraft, setColorDraft] = useState(DEFAULT_OPTIONS.foreground);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -37,6 +39,7 @@ function App() {
   const [foreground, setForeground] = useState(DEFAULT_OPTIONS.foreground);
   const [logo, setLogo] = useState(null);
   const [logoName, setLogoName] = useState('');
+  const [logoError, setLogoError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState(null);
@@ -51,6 +54,13 @@ function App() {
   const contrastValue = contrastRatio(foreground, DEFAULT_OPTIONS.background);
   const lowContrast = contrastValue < 4.5;
   const palette = logo?.colors || [];
+  const nativeSharing = useMemo(() => canShareQR(result), [result]);
+  useEffect(() => setColorDraft(foreground.toUpperCase()), [foreground]);
+  const updateColor = value => {
+    const hex = value.startsWith('#') ? value : `#${value}`;
+    setColorDraft(value);
+    if (/^#[0-9a-f]{6}$/i.test(hex)) selectColor(hex);
+  };
 
   useEffect(() => {
     const ticket = generation.current + 1;
@@ -100,39 +110,34 @@ function App() {
     setRendering(false);
   };
 
+  const selectColor = value => {
+    const next = value.toLowerCase();
+    if (next === foreground) return;
+    invalidate();
+    setForeground(next);
+  };
+
   const acceptFile = async (file) => {
     if (!file) return;
-    invalidate();
     const uploadTicket = ++uploadGeneration.current;
+    setLogoError('');
     const error = validateLogo(file);
-    if (error) {
-      setUploading(false);
-      setLogo(null);
-      setLogoName('');
-      announce(error);
-      if (fileInput.current) fileInput.current.value = '';
-      return;
-    }
-
+    if (error) { setLogoError(error); setUploading(false); return; }
+    invalidate();
     setUploading(true);
-    setLogo(null);
-    setLogoName(file.name);
     try {
       const decoded = await loadLogo(file);
       if (uploadGeneration.current !== uploadTicket) return;
       setLogo(decoded);
-      setLogoName(file.name);
-
-      const primaryColor = decoded.colors.find(color => contrastRatio(color, DEFAULT_OPTIONS.background) >= 4.5);
-      setForeground(primaryColor || DEFAULT_OPTIONS.foreground);
+      setLogoName(file.name || 'Your logo');
+      const primary = decoded.colors.find(color => contrastRatio(color, '#ffffff') >= 4.5)
+        || decoded.colors.find(color => contrastRatio(color, '#ffffff') > 1.5);
+      setForeground(primary || DEFAULT_OPTIONS.foreground);
       setUploading(false);
     } catch (error) {
       if (uploadGeneration.current !== uploadTicket) return;
-      setLogo(null);
-      setLogoName('');
       setUploading(false);
-      announce(error?.message || 'This logo couldn’t be opened. Try a PNG or JPEG.');
-      if (fileInput.current) fileInput.current.value = '';
+      setLogoError(error?.message || 'This image couldn’t be opened. Try another PNG or JPG.');
     }
   };
 
@@ -142,6 +147,7 @@ function App() {
     setUploading(false);
     setLogo(null);
     setLogoName('');
+    setLogoError('');
     if (fileInput.current) fileInput.current.value = '';
   };
 
@@ -163,10 +169,10 @@ function App() {
   };
 
   return (
-    <div className="app-shell" onKeyDown={event => { if (event.key === 'Escape') setColorOpen(false); }}>
+    <div className="app-shell">
       <header className="site-header">
         <a className="brand" href="#main" aria-label="Custom QR code generator">
-          <svg className="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><path d="M15 15h3v3h3v3h-6v-6Zm6 0v3"/></svg>
+          <svg className="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect className="mark-tile" x="1" y="1" width="38" height="38" rx="12"/><path className="mark-line" d="M14 11h11a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V15a4 4 0 0 1 4-4Zm10 13 7 7"/></svg>
           <span>Custom QR</span>
         </a>
         <button className="icon-button theme-toggle" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
@@ -177,22 +183,23 @@ function App() {
         <section className="editor-card" aria-label="QR code details">
           <div className="content-control">
             <label className="field-label" htmlFor="qr-content">Text or URL</label>
-            <textarea id="qr-content" value={text} onChange={event => handleText(event.target.value)} placeholder="https://example.com" rows={3} maxLength={10000} aria-invalid={text.length > 0 && !validation.valid} aria-describedby={text.length > 0 && !validation.valid ? 'content-error' : undefined}/>
+            <textarea id="qr-content" value={text} onChange={event => handleText(event.target.value)} placeholder="https://example.com" spellCheck={false} rows={3} maxLength={10000} aria-invalid={text.length > 0 && !validation.valid} aria-describedby={text.length > 0 && !validation.valid ? 'content-error' : undefined}/>
             {text.length > 0 && !validation.valid && <p className="inline-error" id="content-error" role="alert">{validation.error}</p>}
           </div>
           <div className="logo-control">
-            <span className="field-label">Logo <span className="optional">(optional)</span></span>
-            {!logo && !uploading ? <button type="button" className={`dropzone ${dragging ? 'dragging' : ''}`} onClick={() => fileInput.current?.click()} onDragOver={event => {event.preventDefault();setDragging(true);}} onDragLeave={() => setDragging(false)} onDrop={event => {event.preventDefault();setDragging(false);acceptFile(event.dataTransfer.files?.[0]);}}><Icon name="upload" size={17}/><span>Upload logo</span><small>PNG, JPG</small></button> : <div className="logo-loaded"><span className="logo-thumb">{logo?.dataUrl ? <img src={logo.dataUrl} alt="Uploaded logo"/> : <span className="upload-spinner"/>}</span><span className="logo-file">{logoName}</span><button type="button" className="icon-button" aria-label="Remove logo" onClick={removeLogo}><Icon name="close" size={16}/></button></div>}
-            <input ref={fileInput} className="visually-hidden" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onChange={event => acceptFile(event.target.files?.[0])} aria-label="Choose logo file"/>
+            <span className="field-label">Logo <span className="optional">Optional</span></span>
+            {!logo ? <button type="button" className={`dropzone ${dragging ? 'dragging' : ''}`} disabled={uploading} onClick={() => fileInput.current?.click()} onDragOver={event => {event.preventDefault();setDragging(true);}} onDragLeave={() => setDragging(false)} onDrop={event => {event.preventDefault();setDragging(false);acceptFile(event.dataTransfer.files?.[0]);}} aria-describedby={logoError ? 'logo-error' : undefined}><span className="upload-icon"><Icon name="upload" size={19}/></span><span className="upload-copy"><strong>{uploading ? 'Preparing logo…' : 'Add your logo'}</strong><small>PNG or JPG</small></span><span className="upload-plus" aria-hidden="true">+</span></button> : <div className="logo-loaded"><span className="logo-thumb"><img src={logo.dataUrl} alt="Uploaded logo"/></span><span className="logo-file">{logoName}</span><button type="button" className="replace-button" onClick={() => fileInput.current?.click()} disabled={uploading}>{uploading ? 'Loading…' : 'Replace'}</button><button type="button" className="icon-button" aria-label="Remove logo" onClick={removeLogo}><Icon name="close" size={16}/></button></div>}
+            <input ref={fileInput} className="visually-hidden" type="file" accept="image/png,image/x-png,image/jpeg,.png,.jpg,.jpeg" onChange={event => {const file = event.target.files?.[0];event.target.value = '';acceptFile(file);}} aria-label="Choose logo file"/>
+            {logoError && <p className="inline-error" id="logo-error" role="alert">{logoError}</p>}
           </div>
           <div className="color-control">
-            <span className="field-label">Color</span>
+            <label className="field-label" htmlFor="hex-color">Color</label>
             <div className="color-options">
-              <div className="color-picker-wrap">
-                <button type="button" className="selected-color" aria-label="Change QR color" aria-expanded={colorOpen} onClick={() => {setColorDraft(foreground);setColorOpen(!colorOpen);}}><span className="selected-color-dot" style={{background:foreground}}/><span>{foreground.toUpperCase()}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-                {colorOpen && <div className="color-popover" role="dialog" aria-label="Color picker"><div className="color-popover-fields"><input type="color" value={/^#[0-9a-f]{6}$/i.test(colorDraft) ? colorDraft : foreground} aria-label="Color spectrum" onChange={event => setColorDraft(event.target.value)}/><input type="text" value={colorDraft} aria-label="Hex color" spellCheck={false} maxLength={7} onChange={event => setColorDraft(event.target.value)}/></div><button className="button button-secondary" type="button" disabled={!/^#[0-9a-f]{6}$/i.test(colorDraft)} onClick={() => {invalidate();setForeground(colorDraft.toLowerCase());setColorOpen(false);}}>Apply</button></div>}
+              <div className="selected-color">
+                <input className="color-swatch" type="color" aria-label="Choose QR color" title="Open color picker" value={foreground} onChange={event => selectColor(event.target.value)}/>
+                <input id="hex-color" className="hex-field" aria-label="Hex color" title="Click to edit hex color" value={colorDraft} onChange={event => updateColor(event.target.value)} onBlur={() => setColorDraft(foreground.toUpperCase())} onFocus={event => event.target.select()} onKeyDown={event => {if(event.key === 'Enter')event.currentTarget.blur();if(event.key === 'Escape'){setColorDraft(foreground.toUpperCase());event.currentTarget.blur();}}} spellCheck={false} maxLength={7}/>
               </div>
-              {palette.length > 1 && <div className="brand-colors" aria-label="Logo colors">{palette.map((color,index) => <button key={`${color}-${index}`} type="button" className={`palette-swatch ${foreground.toLowerCase() === color.toLowerCase() ? 'chosen' : ''}`} style={{background:color}} aria-label={`Use logo color ${color}`} aria-pressed={foreground.toLowerCase() === color.toLowerCase()} onClick={() => {invalidate();setForeground(color);}}/>)}</div>}
+              {palette.length > 1 && <div className="brand-colors" aria-label="Logo colors">{palette.map(color => <button key={color} type="button" className={`palette-swatch ${foreground.toLowerCase() === color ? 'chosen' : ''}`} style={{'--swatch':color}} aria-label={`Use logo color ${color}`} aria-pressed={foreground.toLowerCase() === color} onClick={() => selectColor(color)}/>)}</div>}
             </div>
             {lowContrast && <p className="contrast-note" role="status">Use a darker color for easier scanning.</p>}
           </div>
@@ -203,7 +210,7 @@ function App() {
           </div>
           <div className="action-row">
             <button type="button" className="button button-primary" disabled={!readyResult} onClick={() => doAction(current => downloadQR(current, 'png'), 'PNG downloaded.')}><Icon name="download" size={16}/>Download PNG</button>
-            <button type="button" className="button button-secondary" disabled={!readyResult} onClick={() => doAction(shareQR, 'QR code shared.')}><Icon name="share" size={16}/>Share</button>
+            <button type="button" className="button button-secondary" disabled={!readyResult} title={nativeSharing ? 'Share PNG with another app' : 'Copy the PNG to paste into a message. Native file sharing is unavailable in this browser.'} onClick={() => doAction(nativeSharing ? shareQR : copyQR, nativeSharing ? 'QR code shared.' : 'PNG copied. Paste it into your message.')}><Icon name={nativeSharing ? "share" : "copy"} size={16}/>{nativeSharing ? 'Share' : 'Copy PNG'}</button>
           </div>
           <p className="status-message" role="status" aria-live="polite">{message}</p>
         </section>

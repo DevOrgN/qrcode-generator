@@ -55,6 +55,7 @@ app.whenReady().then(async () => {
       canvas.width = canvas.height = 64;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#ed3030'; ctx.fillRect(0, 0, 64, 64);
+      ctx.fillStyle = '#253b80'; ctx.fillRect(0, 0, 16, 16);
       const blob = await new Promise(resolve => canvas.toBlob(resolve));
       const transfer = new DataTransfer();
       transfer.items.add(new File([blob], 'smoke-logo.png', {type: 'image/png'}));
@@ -68,6 +69,13 @@ app.whenReady().then(async () => {
       ctx.drawImage(preview, 0, 0, 64, 64);
       const center = ctx.getImageData(32, 32, 1, 1).data;
       if (center[0] < 220 || center[1] > 70) throw new Error('PNG center logo missing');
+      const palette = [...document.querySelectorAll('.palette-swatch')].map(b => b.getAttribute('aria-label'));
+      if (!palette.includes('Use logo color #ed3030') || !palette.includes('Use logo color #253b80')) throw new Error('Palette altered source logo colors');
+      document.querySelector('.palette-swatch.chosen').click();
+      await new Promise(resolve => setTimeout(resolve, 400));
+      if (!document.querySelector('.qr-image')) throw new Error('Reselecting current color cleared the QR');
+      if (document.querySelector('.color-popover')) throw new Error('Unexpected color dropdown');
+      if (document.querySelector('input[type=file]').value !== '') throw new Error('Logo input was not reset for reselection');
     })()`);
     if (process.argv.includes('--screenshots')) {
       await fs.writeFile('/tmp/custom-qrcode-generator-desktop.png', (await win.webContents.capturePage()).toPNG());

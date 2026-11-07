@@ -1,5 +1,21 @@
 # Validation
 
+## Current UI refinement — 2026-11-07
+
+- `npm run check`: 17 tests passed and production build succeeded.
+- Updated Electron UI smoke passed, including exact logo swatches, selecting the current color, reselection reset, and responsive overflow.
+- Browser checks covered transparent, RGB, indexed, grayscale, wide (5000px), larger-than-2-MiB PNGs, and an orientation-tagged JPEG. Invalid replacements preserved the existing logo.
+- Direct hex editing and same-file reselection passed. Missing/generic PNG MIME metadata and exact source palette colors have regression coverage. Images are normalized locally to at most 512px for embedding.
+- Screenshots were inspected at desktop, tablet, and 430/375/320px widths in light/dark modes. QR image and square stage centers matched; no horizontal overflow. Final 320px dark screenshot was reviewed again.
+- The new downloaded logo/custom-color PNG was 1024 × 1024; ZBar decoded `https://example.com/refined`.
+- Actual Copy PNG completed. This browser has no `navigator.share`; native delivery to another app could not be tested. Native capability tests cover PNG file support.
+- Current evidence: `evidence/refinement-walkthrough.mp4`, with two numbered scenario divider cards, plus desktop/mobile screenshots. Captured only isolated browser tabs. Actions retain recorded speed; text is pasted.
+
+The exact PNGs that failed on the user’s machine were not supplied. Physical camera/print scanning and native share delivery remain unverified. The earlier results below describe the previous baseline, not a rerun in this refinement.
+
+## Earlier baseline
+
+
 Verified locally on 2026-11-06 using installed Node, Electron, Xvfb, FFmpeg,
 and ZBar tools. Existing dependencies were reused; nothing was downloaded.
 

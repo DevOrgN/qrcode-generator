@@ -40,8 +40,8 @@ the npm Electron launcher, which can trigger a binary download in some versions.
 
 - Text and URL QR codes with Unicode and byte-aware capacity validation.
 - Live preview; stale renders cannot be exported after editing.
-- Optional PNG/JPEG center logos up to 2 MiB, bounded image dimensions, and logo color sampling.
-- One editable QR color with a contrast reminder and automatically sampled logo colors.
+- Optional PNG/JPEG center logos up to 20 MiB, bounded image dimensions, and colors sampled from original pixels.
+- Direct hex editing and a native color picker, with a contrast reminder and logo color swatches.
 - Minimal monochrome controls with a persistent light/dark theme toggle.
 - 1024-pixel PNG downloads and native file sharing when supported by the browser.
 - Responsive keyboard-accessible controls; content remains in memory for the session.
@@ -54,8 +54,8 @@ L; the encoder can fit more numeric/alphanumeric characters. A four-module quiet
 zone is retained. Test the final exported code on the devices and print size
 where it will be used, especially with logos or custom colors.
 
-File sharing depends on browser/device support. Unsupported actions provide
-download guidance. No content history is stored.
+File sharing depends on browser/device support. When native PNG sharing is unavailable, Copy PNG uses the image clipboard;
+Download PNG remains available. Clipboard access also depends on browser permissions. No content history is stored.
 
 See [user scenarios and verification](docs/WALKTHROUGH.md) for the recorded flows.
 
