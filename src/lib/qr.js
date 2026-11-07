@@ -143,15 +143,10 @@ export function extractLogoColors(pixels, maximum = 5) {
     families.set(key, family);
   }
   const eligible = [...families.values()]
-    .filter(({ color }) => {
-      const hex = `#${color.toString(16).padStart(6, '0')}`;
-      return contrastRatio(hex, '#ffffff') >= 4.5;
-    })
-    .sort((a, b) => {
-      const colorA = `#${a.color.toString(16).padStart(6, '0')}`;
-      const colorB = `#${b.color.toString(16).padStart(6, '0')}`;
-      return luminance(colorA) - luminance(colorB) || b.weight - a.weight;
-    });
+    // Only omit white and near-white artwork. Saturated brand colors such as gold
+    // can be useful QR foregrounds even when they do not meet text contrast rules.
+    .filter(({ color }) => luminance(`#${color.toString(16).padStart(6, '0')}`) < 0.85)
+    .sort((a, b) => b.weight - a.weight || b.frequency - a.frequency);
   const chosen = [];
   for (const { color, weight } of eligible) {
     if (weight < total * 0.0025) continue;

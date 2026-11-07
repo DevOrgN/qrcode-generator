@@ -124,20 +124,20 @@ test('logo palette uses exact source RGB values and ignores transparent and rare
   assert.deepEqual(extractLogoColors([128,0,0,128,128,0,0,128]), ['#800000']);
 });
 
-test('logo suggestions exclude light pixels before truncation and sort darkest first', () => {
+test('logo palette excludes only near-white colors and ranks dominant brand colors first', () => {
   const pixels = [];
   const add = (rgb, count) => { for (let i = 0; i < count; i++) pixels.push(...rgb, 255); };
   add([255, 255, 255], 1000);
-  add([243, 229, 171], 800); // pale gold
+  add([238, 190, 42], 800); // saturated gold
   add([51, 51, 51], 100);
-  add([24, 24, 24], 100);
-  assert.deepEqual(extractLogoColors(pixels, 2), ['#181818', '#333333']);
+  add([24, 24, 24], 200);
+  assert.deepEqual(extractLogoColors(pixels, 2), ['#eebe2a', '#181818']);
 });
 
-test('logo palette has no suggestion when every source color is too light', () => {
+test('logo palette excludes white and near-white but retains eligible colors', () => {
   const pixels = [];
-  for (let i = 0; i < 100; i++) pixels.push(255, 255, 255, 255, 243, 229, 171, 255);
-  assert.deepEqual(extractLogoColors(pixels), []);
+  for (let i = 0; i < 100; i++) pixels.push(255, 255, 255, 255, 250, 247, 240, 255, 238, 190, 42, 255);
+  assert.deepEqual(extractLogoColors(pixels), ['#eebe2a']);
 });
 
 test('native sharing capability rejects absent or unsupported file sharing', () => {
