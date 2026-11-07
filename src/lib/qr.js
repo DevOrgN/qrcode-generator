@@ -254,11 +254,37 @@ function imageInfoFromDataUrl(dataUrl) {
 function logoSvg(dataUrl, size) {
   const info = imageInfoFromDataUrl(dataUrl);
   const edge = size * MAX_LOGO_FRACTION;
-  const pad = Math.max(4, size * 0.012);
   const ratio = Math.min(edge / info.width, edge / info.height);
   const width = info.width * ratio, height = info.height * ratio;
   const x = (size - width) / 2, y = (size - height) / 2;
-  return `<rect x="${x-pad}" y="${y-pad}" width="${width+pad*2}" height="${height+pad*2}" rx="${pad}" fill="#ffffff"/><image x="${x}" y="${y}" width="${width}" height="${height}" href="${xmlEscape(dataUrl)}"/>`;
+  return `<image x="${x}" y="${y}" width="${width}" height="${height}" href="${xmlEscape(dataUrl)}"/>`;
+}
+
+async function prepareLogo(dataUrl) {
+  const image = await loadImage(dataUrl);
+  const width = image.naturalWidth, height = image.naturalHeight;
+  const source = document.createElement('canvas');
+  source.width = width; source.height = height;
+  const sourceContext = source.getContext('2d', { willReadFrequently: true });
+  sourceContext.drawImage(image, 0, 0);
+  const pixels = sourceContext.getImageData(0, 0, width, height);
+  const halo = Math.max(2, Math.ceil(Math.min(width, height) * 0.035));
+  const output = document.createElement('canvas');
+  output.width = width + halo * 2; output.height = height + halo * 2;
+  const context = output.getContext('2d');
+  const backing = context.createImageData(output.width, output.height);
+  // Dilate visible alpha into a small white halo, preserving transparent holes.
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+    if (pixels.data[(y * width + x) * 4 + 3] <= 8) continue;
+    for (let dy = -halo; dy <= halo; dy += 1) for (let dx = -halo; dx <= halo; dx += 1) {
+      if (dx * dx + dy * dy > halo * halo) continue;
+      const at = ((y + halo + dy) * output.width + x + halo + dx) * 4;
+      backing.data[at] = backing.data[at + 1] = backing.data[at + 2] = backing.data[at + 3] = 255;
+    }
+  }
+  context.putImageData(backing, 0, 0);
+  context.drawImage(source, halo, halo);
+  return output.toDataURL('image/png');
 }
 
 function addLogoToSvg(svg, logo, size) {
@@ -292,13 +318,8 @@ async function rasterWithLogo(dataUrl, logo, size) {
   if (!context) throw new Error('PNG export is unavailable because canvas could not be created.');
   context.drawImage(qrImage, 0, 0, size, size);
   const edge = size * MAX_LOGO_FRACTION;
-  const pad = Math.max(4, size * 0.012);
   const ratio = Math.min(edge / logoImage.naturalWidth, edge / logoImage.naturalHeight);
   const width = logoImage.naturalWidth * ratio, height = logoImage.naturalHeight * ratio;
-  context.fillStyle = '#ffffff';
-  context.beginPath();
-  context.roundRect((size-width)/2-pad, (size-height)/2-pad, width+pad*2, height+pad*2, pad);
-  context.fill();
   context.drawImage(logoImage, size / 2 - width / 2, size / 2 - height / 2, width, height);
   return canvas.toDataURL('image/png');
 }
@@ -358,6 +379,7 @@ export async function generateQR(text, options = {}) {
     : await QRCode.toDataURL(text, { ...qrOptions, type: 'image/png' });
   if (logo) {
     if (typeof document === 'undefined') throw new Error('PNG export with a logo requires a browser canvas.');
+    logo = await prepareLogo(logo);
     const png = await rasterWithLogo(dataUrl, logo, size);
     svg = addLogoToSvg(svg, logo, size);
     return { dataUrl: png, svg, size, bytes: validation.bytes, modules: QRCode.create(text, { errorCorrectionLevel: level }).modules.size };

@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateQR } from '../src/lib/qr.js';
 
+function pngUrl(width, height) {
+  const bytes = new Uint8Array(24);
+  bytes.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  new DataView(bytes.buffer).setUint32(16, width);
+  new DataView(bytes.buffer).setUint32(20, height);
+  return `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`;
+}
+
 test('logo SVG uses a transform from pixel coordinates into module coordinates', async () => {
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const previousImage = Object.getOwnPropertyDescriptor(globalThis, 'Image');
@@ -11,11 +19,13 @@ test('logo SVG uses a transform from pixel coordinates into module coordinates',
     naturalHeight = 64;
     set src(_value) { queueMicrotask(() => this.onload()); }
   }
-  const context = { drawImage() {}, fillRect() {}, beginPath() {}, roundRect() {}, fill() {} };
+  const context = { drawImage() {}, fillRect() {}, beginPath() {}, roundRect() {}, fill() {},
+    getImageData: (x, y, width, height) => ({ data: new Uint8ClampedArray(width * height * 4).map((_, i) => i % 4 === 3 ? 255 : 0) }),
+    createImageData: (width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }), putImageData() {} };
   Object.defineProperty(globalThis, 'Image', { configurable: true, value: MockImage });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
     createElement: () => {
-      const canvas = { getContext: () => context, toDataURL: () => 'data:image/png;base64,AA==' };
+      const canvas = { width: 0, height: 0, getContext: () => context, toDataURL: () => pngUrl(canvas.width || 64, canvas.height || 64) };
       canvases.push(canvas);
       return canvas;
     },
@@ -34,7 +44,7 @@ test('logo SVG uses a transform from pixel coordinates into module coordinates',
       assert.ok(scale, 'Logo must use module coordinates');
       assert.equal(Number(scale[1]) * size, Number(view[1]));
       assert.match(result.svg, /href="data:image\/png;base64,/);
-      assert.deepEqual(canvases.slice(-2).map(({ width, height }) => [width, height]), [[size, size], [size, size]]);
+      assert.deepEqual([canvases.at(-1).width, canvases.at(-1).height], [size, size]);
     }
   } finally {
     if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
@@ -87,10 +97,10 @@ test('transparent logo padding is cropped to visible alpha bounds', async () => 
   }
 });
 
-test('aspect-shaped logo keeps its proportions and receives a matching white backing', async () => {
+test('aspect-shaped logo keeps proportions and exports a prepared halo asset to SVG and PNG', async () => {
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const previousImage = Object.getOwnPropertyDescriptor(globalThis, 'Image');
-  const roundRects = [];
+  const preparedSize = [];
   class MockImage {
     naturalWidth = 160;
     naturalHeight = 80;
@@ -98,11 +108,12 @@ test('aspect-shaped logo keeps its proportions and receives a matching white bac
   }
   const context = {
     drawImage() {}, fillRect() {}, beginPath() {}, fill() {},
-    roundRect: (...args) => roundRects.push(args),
+    getImageData: (x, y, width, height) => ({ data: new Uint8ClampedArray(width * height * 4).map((_, i) => i % 4 === 3 ? 255 : 0) }),
+    createImageData: (width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }), putImageData() {},
   };
   Object.defineProperty(globalThis, 'Image', { configurable: true, value: MockImage });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
-    createElement: () => ({ getContext: () => context, toDataURL: () => 'data:image/png;base64,AA==' }),
+    createElement: () => { const canvas = { width: 0, height: 0, getContext: () => context, toDataURL: () => pngUrl(canvas.width || 160, canvas.height || 80) }; preparedSize.push(canvas); return canvas; },
   } });
   const bytes = new Uint8Array(24);
   bytes.set([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -111,19 +122,14 @@ test('aspect-shaped logo keeps its proportions and receives a matching white bac
   const logo = `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`;
   try {
     const result = await generateQR('https://example.com/wide-logo', { size: 512, logo });
-    const match = /<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="([\d.]+)" fill="#ffffff"\/><image x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/.exec(result.svg);
-    assert.ok(match, 'SVG should contain a white backing sized around the image');
-    const [, ...values] = match;
-    const [sx, sy, sw, sh, sr, ix, iy, iw, ih] = values.map(Number);
-    assert.ok(Math.abs(iw / ih - 2) < 1e-9, 'SVG logo should preserve the source aspect ratio');
-    assert.ok(Math.abs((sx + sw / 2) - 256) < 1e-9);
-    assert.ok(Math.abs((sy + sh / 2) - 256) < 1e-9);
-    assert.ok(Math.abs((sw - iw) - 2 * Number(sr)) < 1e-9);
-    assert.ok(Math.abs((sh - ih) - 2 * Number(sr)) < 1e-9);
-    const [rx, ry, rw, rh, radius] = roundRects.at(-1);
-    assert.ok(Math.abs(rw / rh - sw / sh) < 1e-9, 'PNG backing should have the same aspect-shaped dimensions as SVG');
-    assert.ok(Math.abs((rx + rw / 2) - 256) < 1e-9 && Math.abs((ry + rh / 2) - 256) < 1e-9);
-    assert.equal(radius, Number(sr));
+    const match = /<image x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/.exec(result.svg);
+    assert.ok(match, 'SVG should embed the prepared composited logo');
+    const [ix, iy, iw, ih] = match.slice(1).map(Number);
+    assert.ok(Math.abs(iw / ih - (166 / 86)) < 1e-9, 'SVG should use the same prepared alpha-halo asset');
+    assert.ok(Math.abs((ix + iw / 2) - 256) < 1e-9);
+    assert.ok(Math.abs((iy + ih / 2) - 256) < 1e-9);
+    assert.ok(preparedSize.some(canvas => canvas.width > 160 && canvas.height > 80), 'composited logo should add a halo around visible pixels');
+    assert.match(result.svg, /href="data:image\/png;base64,/);
   } finally {
     if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
     else delete globalThis.document;
