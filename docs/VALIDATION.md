@@ -1,5 +1,12 @@
 # Validation
 
+## Dark default and logo integration — 2026-11-08
+
+New sessions default to dark; saved preferences remain respected. Header and favicon share a QR symbol. Editor and preview have separate rounded borders. Transparent margins are cropped before embedding, and the white safety backing follows the logo aspect ratio instead of clearing a square. High correction and the existing maximum logo extent remain in place.
+
+Desktop and 375px phone screenshots were inspected. A real exported logo PNG decoded to `https://example.com/integrated` with ZBar. The build passed; independent regression coverage brought the passing suite to 19 tests. Evidence is in `evidence/integrated-*`. The short clip demonstrates removing and re-adding the transparent logo; native file chooser UI is outside tab capture. Physical device scanning is not verified.
+
+
 ## Current UI refinement — 2026-11-07
 
 - `npm run check`: 17 tests passed and production build succeeded.
