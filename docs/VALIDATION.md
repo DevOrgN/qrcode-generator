@@ -1,5 +1,10 @@
 # Validation
 
+## Readable logo backing — 2026-11-08
+
+Replaced the alpha-only halo with a compact solid white backing matching cropped artwork bounds and aspect ratio. This prevents QR modules appearing through fine lettering. A transparent fine-text fixture was inspected in the browser; its exported PNG decoded to `https://example.com/readable-logo`. Screenshot: `evidence/readable-logo.png`. The original logo source from the user’s example was not supplied. Luna ran the 19-test suite and production build successfully.
+
+
 ## Seamless editing and alpha logo blending — 2026-11-08
 
 Removed the contrast message. Last valid QR remains visible during valid text edits, while exports require a matching completed render. A browser sample over three successive edits observed 141 frames with no missing image; exports disabled during regeneration.
