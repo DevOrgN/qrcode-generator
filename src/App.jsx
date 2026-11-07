@@ -27,8 +27,8 @@ function Icon({ name, size = 18, ...props }) {
 
 function App() {
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('qr-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
-    catch { return 'light'; }
+    try { return localStorage.getItem('qr-theme') || 'dark'; }
+    catch { return 'dark'; }
   });
   const [colorDraft, setColorDraft] = useState(DEFAULT_OPTIONS.foreground);
   useEffect(() => {
