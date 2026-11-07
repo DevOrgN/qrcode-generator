@@ -172,7 +172,7 @@ function App() {
     <div className="app-shell">
       <header className="site-header">
         <a className="brand" href="#main" aria-label="Custom QR code generator">
-          <svg className="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect className="mark-tile" x="1" y="1" width="38" height="38" rx="12"/><path className="mark-line" d="M14 11h11a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V15a4 4 0 0 1 4-4Zm10 13 7 7"/></svg>
+          <svg className="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect className="mark-tile" x="1" y="1" width="38" height="38" rx="10"/><path d="M9 9h8v8H9zM23 9h8v8h-8zM9 23h8v8H9z" fill="none" stroke="var(--surface)" strokeWidth="2.5"/><path d="M23 23h4v4h4v4h-8zM29 21h3v3h-3z" fill="var(--surface)"/></svg>
           <span>Custom QR</span>
         </a>
         <button className="icon-button theme-toggle" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
