@@ -207,7 +207,9 @@ export async function loadLogo(file) {
   if (right < left) throw new Error('This image is completely transparent. Choose a visible logo.');
   const cropped = document.createElement('canvas');
   cropped.width = right - left + 1; cropped.height = bottom - top + 1;
-  cropped.getContext('2d').drawImage(canvas, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
+  const croppedContext = cropped.getContext('2d');
+  if (!croppedContext) throw new Error('This browser could not prepare the image. Try another browser.');
+  croppedContext.drawImage(canvas, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
   return { dataUrl: cropped.toDataURL('image/png'), width: cropped.width, height: cropped.height, colors };
 }
 
@@ -271,11 +273,13 @@ async function prepareLogo(dataUrl) {
   const source = document.createElement('canvas');
   source.width = width; source.height = height;
   const sourceContext = source.getContext('2d', { willReadFrequently: true });
+  if (!sourceContext) throw new Error('PNG export is unavailable because canvas could not be created.');
   sourceContext.drawImage(image, 0, 0);
   const padding = Math.max(2, Math.ceil(Math.min(width, height) * 0.035));
   const output = document.createElement('canvas');
   output.width = width + padding * 2; output.height = height + padding * 2;
   const context = output.getContext('2d');
+  if (!context) throw new Error('PNG export is unavailable because canvas could not be created.');
   // Keep QR modules out of fine or transparent artwork with a compact solid backing.
   // Its bounds follow the cropped artwork aspect ratio instead of expanding to a square.
   const radius = Math.min(padding, Math.min(width, height) * 0.12);
@@ -394,8 +398,9 @@ function requireBrowserAction(name) {
 }
 
 function dataUrlBlob(dataUrl) {
-  const [header, payload] = dataUrl.split(',', 2);
-  const mime = /data:([^;]+)/.exec(header)?.[1] || 'image/png';
+  const match = /^data:(image\/png);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!match) throw new Error('The QR image is invalid. Create the QR code again, then try again.');
+  const [, mime, payload] = match;
   const binary = typeof atob === 'function' ? atob(payload) : Buffer.from(payload, 'base64').toString('binary');
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -406,6 +411,8 @@ export function downloadQR(result, format = 'png') {
   if (!result) throw new Error('Create a QR code before downloading.');
   const kind = String(format).toLowerCase();
   if (kind !== 'png' && kind !== 'svg') throw new Error('Unsupported export format. Choose PNG or SVG.');
+  if (kind === 'png') dataUrlBlob(result.dataUrl); // Validate before touching the DOM.
+  else if (typeof result.svg !== 'string' || !/<svg[\s>]/i.test(result.svg)) throw new Error('The QR export is invalid. Create the QR code again, then try again.');
   requireBrowserAction('Downloading QR codes');
   let blob, extension;
   if (kind === 'png') { blob = dataUrlBlob(result.dataUrl); extension = 'png'; }

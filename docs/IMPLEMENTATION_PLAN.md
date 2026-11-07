@@ -1,4 +1,9 @@
-# Implementation plan
+# Implementation plan (historical — superseded by docs/ARCHITECTURE.md)
+
+The limits below are from the original build brief. Current behavior:
+logo limit 20 MiB, correction level M without a logo / H with one, export
+1024 px PNG only from the UI. See `docs/ARCHITECTURE.md` for the source of
+truth.
 
 Build fresh source from the prototype's documented feature inventory. Do not copy prototype application code or assets. Reuse installed third-party packages only. Work locally; no push or deployment.
 

@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "description": "Private, offline QR code studio with logo customization",
   "main": "electron/main.cjs",
+  "engines": { "node": ">=20" },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && node scripts/prepare-offline.mjs",

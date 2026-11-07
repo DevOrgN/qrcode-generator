@@ -1,5 +1,20 @@
 # Validation
 
+## Production-readiness pass — 2026-11-08
+
+Re-ran the full local suite after the docs/security/test pass: **28 unit
+tests passing** (`npm test`), production build passing (`npm run check`).
+Added `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/SECURITY.md`,
+`docs/RELEASING.md`, `SECURITY.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
+`LICENSE` (MIT), `.github/workflows/ci.yml`. New `tests/security.test.js`
+covers malformed/script-bearing export payloads, logo validation edges, and
+per-level capacity. Export helpers now validate PNG data URLs and SVG shape
+before using browser APIs; canvas contexts are null-checked.
+
+Still unverified: native share delivery on a physical phone, camera/print
+scanning, native installer/APK builds. No remote repository is configured, so
+nothing was pushed — see `docs/RELEASING.md`.
+
 ## Readable logo backing — 2026-11-08
 
 Replaced the alpha-only halo with a compact solid white backing matching cropped artwork bounds and aspect ratio. This prevents QR modules appearing through fine lettering. A transparent fine-text fixture was inspected in the browser; its exported PNG decoded to `https://example.com/readable-logo`. Screenshot: `evidence/readable-logo.png`. The original logo source from the user’s example was not supplied. Luna ran the 19-test suite and production build successfully.

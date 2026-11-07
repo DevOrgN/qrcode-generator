@@ -1,4 +1,7 @@
-# User walkthrough scenarios
+# User walkthrough scenarios (historical — superseded by docs/TESTING.md)
+
+Test counts in this document describe the recorded build at the time (12 unit
+tests). The current suite has 28 tests; see `docs/VALIDATION.md`.
 
 All five scenarios were exercised on the production build before the final
 recording, then performed again in the recorded walkthrough.

@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: node --check electron/main.cjs
+      - run: node --check scripts/offline-smoke.cjs
+      - run: node --check scripts/run-desktop.mjs
+      - run: node --check scripts/smoke.cjs
+      - run: node --check scripts/prepare-offline.mjs
