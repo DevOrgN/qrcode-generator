@@ -1,5 +1,14 @@
 # Validation
 
+## Seamless editing and alpha logo blending — 2026-11-08
+
+Removed the contrast message. Last valid QR remains visible during valid text edits, while exports require a matching completed render. A browser sample over three successive edits observed 141 frames with no missing image; exports disabled during regeneration.
+
+Transparent logo artwork now receives a small alpha-shaped white outline rather than a rectangular backing. A ring PNG showed QR modules through its center; its actual exported PNG decoded to `https://example.com/seamless-abc` using ZBar. Header and favicon resolve to the same `qr-mark.svg` asset (favicon cache-busted). Desktop and 375px mobile screenshots were reviewed; mobile had no horizontal overflow.
+
+Luna implemented and committed the changes and ran `npm run check`: 19 tests and build passed. Current evidence: `evidence/seamless-desktop.png`, `seamless-mobile.png`, and `seamless-editing.mp4`. Physical phone scanning and the user’s exact logo files remain untested.
+
+
 ## Dark default and logo integration — 2026-11-08
 
 New sessions default to dark; saved preferences remain respected. Header and favicon share a QR symbol. Editor and preview have separate rounded borders. Transparent margins are cropped before embedding, and the white safety backing follows the logo aspect ratio instead of clearing a square. High correction and the existing maximum logo extent remain in place.
