@@ -136,3 +136,8 @@ textarea::placeholder { color: var(--muted); }
   .preview-card { padding: 18px; }
   .qr-stage, .action-row { width: min(100%, 220px); }
 }
+
+/* Independent panels keep all four corners rounded at every width. */
+.workspace { gap: 18px; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.editor-card, .preview-card { border: 1px solid var(--border); border-radius: 20px; }
+.editor-card { background: var(--surface); }
