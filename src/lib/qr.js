@@ -267,23 +267,18 @@ async function prepareLogo(dataUrl) {
   source.width = width; source.height = height;
   const sourceContext = source.getContext('2d', { willReadFrequently: true });
   sourceContext.drawImage(image, 0, 0);
-  const pixels = sourceContext.getImageData(0, 0, width, height);
-  const halo = Math.max(2, Math.ceil(Math.min(width, height) * 0.035));
+  const padding = Math.max(2, Math.ceil(Math.min(width, height) * 0.035));
   const output = document.createElement('canvas');
-  output.width = width + halo * 2; output.height = height + halo * 2;
+  output.width = width + padding * 2; output.height = height + padding * 2;
   const context = output.getContext('2d');
-  const backing = context.createImageData(output.width, output.height);
-  // Dilate visible alpha into a small white halo, preserving transparent holes.
-  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
-    if (pixels.data[(y * width + x) * 4 + 3] <= 8) continue;
-    for (let dy = -halo; dy <= halo; dy += 1) for (let dx = -halo; dx <= halo; dx += 1) {
-      if (dx * dx + dy * dy > halo * halo) continue;
-      const at = ((y + halo + dy) * output.width + x + halo + dx) * 4;
-      backing.data[at] = backing.data[at + 1] = backing.data[at + 2] = backing.data[at + 3] = 255;
-    }
-  }
-  context.putImageData(backing, 0, 0);
-  context.drawImage(source, halo, halo);
+  // Keep QR modules out of fine or transparent artwork with a compact solid backing.
+  // Its bounds follow the cropped artwork aspect ratio instead of expanding to a square.
+  const radius = Math.min(padding, Math.min(width, height) * 0.12);
+  context.fillStyle = '#fff';
+  context.beginPath();
+  context.roundRect(0, 0, output.width, output.height, radius);
+  context.fill();
+  context.drawImage(source, padding, padding);
   return output.toDataURL('image/png');
 }
 
