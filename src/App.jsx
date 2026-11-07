@@ -4,7 +4,6 @@ import {
   validateText,
   validateLogo,
   loadLogo,
-  contrastRatio,
   generateQR,
   downloadQR,
   shareQR,
@@ -121,8 +120,7 @@ function App() {
       if (uploadGeneration.current !== uploadTicket) return;
       setLogo(decoded);
       setLogoName(file.name || 'Your logo');
-      const primary = decoded.colors.find(color => contrastRatio(color, '#ffffff') >= 4.5)
-        || decoded.colors.find(color => contrastRatio(color, '#ffffff') > 1.5);
+      const primary = decoded.colors[0];
       setForeground(primary || DEFAULT_OPTIONS.foreground);
       setUploading(false);
     } catch (error) {

@@ -142,8 +142,18 @@ export function extractLogoColors(pixels, maximum = 5) {
     if (frequency > family.frequency) { family.color = color; family.frequency = frequency; }
     families.set(key, family);
   }
+  const eligible = [...families.values()]
+    .filter(({ color }) => {
+      const hex = `#${color.toString(16).padStart(6, '0')}`;
+      return contrastRatio(hex, '#ffffff') >= 4.5;
+    })
+    .sort((a, b) => {
+      const colorA = `#${a.color.toString(16).padStart(6, '0')}`;
+      const colorB = `#${b.color.toString(16).padStart(6, '0')}`;
+      return luminance(colorA) - luminance(colorB) || b.weight - a.weight;
+    });
   const chosen = [];
-  for (const { color, weight } of [...families.values()].sort((a, b) => b.weight - a.weight)) {
+  for (const { color, weight } of eligible) {
     if (weight < total * 0.0025) continue;
     const rgb = [color >> 16, (color >> 8) & 255, color & 255];
     if (chosen.some(item => item.rgb.reduce((sum, channel, index) => sum + (channel - rgb[index]) ** 2, 0) < 36 ** 2)) continue;

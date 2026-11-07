@@ -121,7 +121,23 @@ test('logo palette uses exact source RGB values and ignores transparent and rare
   for (let i = 0; i < 400; i++) pixels.push(255, 255, 255, 0);
   pixels.push(110, 110, 110, 255);
   assert.deepEqual(extractLogoColors(pixels), ['#253b80', '#ab3535']);
-  assert.deepEqual(extractLogoColors([255,0,0,128,255,0,0,128]), ['#ff0000']);
+  assert.deepEqual(extractLogoColors([128,0,0,128,128,0,0,128]), ['#800000']);
+});
+
+test('logo suggestions exclude light pixels before truncation and sort darkest first', () => {
+  const pixels = [];
+  const add = (rgb, count) => { for (let i = 0; i < count; i++) pixels.push(...rgb, 255); };
+  add([255, 255, 255], 1000);
+  add([243, 229, 171], 800); // pale gold
+  add([51, 51, 51], 100);
+  add([24, 24, 24], 100);
+  assert.deepEqual(extractLogoColors(pixels, 2), ['#181818', '#333333']);
+});
+
+test('logo palette has no suggestion when every source color is too light', () => {
+  const pixels = [];
+  for (let i = 0; i < 100; i++) pixels.push(255, 255, 255, 255, 243, 229, 171, 255);
+  assert.deepEqual(extractLogoColors(pixels), []);
 });
 
 test('native sharing capability rejects absent or unsupported file sharing', () => {
