@@ -190,7 +190,20 @@ export async function loadLogo(file) {
   const context = canvas.getContext('2d');
   if (!context) throw new Error('This browser could not prepare the image. Try another browser.');
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return { dataUrl: canvas.toDataURL('image/png'), width: image.naturalWidth, height: image.naturalHeight, colors };
+  // Trim only transparent pixels; preserve white artwork and internal transparency.
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  let left = canvas.width, top = canvas.height, right = -1, bottom = -1;
+  for (let y = 0; y < canvas.height; y += 1) for (let x = 0; x < canvas.width; x += 1) {
+    if (pixels[(y * canvas.width + x) * 4 + 3] > 8) {
+      left = Math.min(left, x); top = Math.min(top, y);
+      right = Math.max(right, x); bottom = Math.max(bottom, y);
+    }
+  }
+  if (right < left) throw new Error('This image is completely transparent. Choose a visible logo.');
+  const cropped = document.createElement('canvas');
+  cropped.width = right - left + 1; cropped.height = bottom - top + 1;
+  cropped.getContext('2d').drawImage(canvas, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
+  return { dataUrl: cropped.toDataURL('image/png'), width: cropped.width, height: cropped.height, colors };
 }
 
 function parseHexColor(value, name) {
@@ -239,13 +252,13 @@ function imageInfoFromDataUrl(dataUrl) {
 }
 
 function logoSvg(dataUrl, size) {
-  imageInfoFromDataUrl(dataUrl);
+  const info = imageInfoFromDataUrl(dataUrl);
   const edge = size * MAX_LOGO_FRACTION;
   const pad = Math.max(4, size * 0.012);
-  const box = edge + pad * 2;
-  const x = (size - box) / 2;
-  const radius = Math.max(5, size * 0.012);
-  return `<rect x="${x}" y="${x}" width="${box}" height="${box}" rx="${radius}" fill="#ffffff"/><image x="${x + pad}" y="${x + pad}" width="${edge}" height="${edge}" href="${xmlEscape(dataUrl)}" preserveAspectRatio="xMidYMid meet"/>`;
+  const ratio = Math.min(edge / info.width, edge / info.height);
+  const width = info.width * ratio, height = info.height * ratio;
+  const x = (size - width) / 2, y = (size - height) / 2;
+  return `<rect x="${x-pad}" y="${y-pad}" width="${width+pad*2}" height="${height+pad*2}" rx="${pad}" fill="#ffffff"/><image x="${x}" y="${y}" width="${width}" height="${height}" href="${xmlEscape(dataUrl)}"/>`;
 }
 
 function addLogoToSvg(svg, logo, size) {
@@ -280,14 +293,12 @@ async function rasterWithLogo(dataUrl, logo, size) {
   context.drawImage(qrImage, 0, 0, size, size);
   const edge = size * MAX_LOGO_FRACTION;
   const pad = Math.max(4, size * 0.012);
-  const box = edge + pad * 2;
-  const x = (size - box) / 2;
-  context.fillStyle = '#ffffff';
-  context.beginPath();
-  context.roundRect(x, x, box, box, Math.max(5, size * 0.012));
-  context.fill();
   const ratio = Math.min(edge / logoImage.naturalWidth, edge / logoImage.naturalHeight);
   const width = logoImage.naturalWidth * ratio, height = logoImage.naturalHeight * ratio;
+  context.fillStyle = '#ffffff';
+  context.beginPath();
+  context.roundRect((size-width)/2-pad, (size-height)/2-pad, width+pad*2, height+pad*2, pad);
+  context.fill();
   context.drawImage(logoImage, size / 2 - width / 2, size / 2 - height / 2, width, height);
   return canvas.toDataURL('image/png');
 }
