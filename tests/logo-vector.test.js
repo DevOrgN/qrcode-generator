@@ -127,6 +127,8 @@ test('aspect-shaped logo gets a compact rounded white backing shared by SVG and 
     const match = /<image x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/.exec(result.svg);
     assert.ok(match, 'SVG should embed the prepared composited logo');
     const [ix, iy, iw, ih] = match.slice(1).map(Number);
+    assert.ok(iw <= 512 * 0.22 && ih <= 512 * 0.22, 'logo extent should use the modestly increased maximum');
+    assert.ok(iw > 512 * 0.18, 'logo should be slightly larger than the former maximum');
     assert.ok(Math.abs(iw / ih - (166 / 86)) < 1e-9, 'SVG should use the same aspect-shaped backing asset');
     assert.ok(Math.abs((ix + iw / 2) - 256) < 1e-9);
     assert.ok(Math.abs((iy + ih / 2) - 256) < 1e-9);

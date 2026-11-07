@@ -11,7 +11,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
 const MAX_LOGO_BYTES = 20 * 1024 * 1024;
 const MAX_LOGO_EDGE = 16384;
 const MAX_LOGO_PIXELS = 64_000_000;
-const MAX_LOGO_FRACTION = 0.18;
+const MAX_LOGO_FRACTION = 0.22;
 const CAPACITY_BYTES = Object.freeze({ L: 2953, M: 2331, Q: 1663, H: 1273 });
 const MIME_BY_SIGNATURE = { png: 'image/png', jpeg: 'image/jpeg' };
 
