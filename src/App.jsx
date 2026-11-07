@@ -51,8 +51,7 @@ function App() {
   const actionTimer = useRef(null);
 
   const validation = useMemo(() => validateText(text, logo ? 'H' : 'M'), [text, logo]);
-  const contrastValue = contrastRatio(foreground, DEFAULT_OPTIONS.background);
-  const lowContrast = contrastValue < 4.5;
+  const inputKey = `${text}\u0000${foreground}\u0000${logo?.dataUrl || ''}`;
   const palette = logo?.colors || [];
   const nativeSharing = useMemo(() => canShareQR(result), [result]);
   useEffect(() => setColorDraft(foreground.toUpperCase()), [foreground]);
@@ -65,8 +64,8 @@ function App() {
   useEffect(() => {
     const ticket = generation.current + 1;
     generation.current = ticket;
-    setResult(null);
     if (!text.trim() || !validation.valid || uploading) {
+      setResult(null);
       setRendering(false);
       return undefined;
     }
@@ -81,7 +80,7 @@ function App() {
           logo: logo?.dataUrl || null,
         });
         if (generation.current === ticket) {
-          setResult(next);
+          setResult({ ...next, inputKey });
           setRendering(false);
         }
       } catch (error) {
@@ -104,16 +103,9 @@ function App() {
     actionTimer.current = window.setTimeout(() => setMessage(''), 3600);
   };
 
-  const invalidate = () => {
-    generation.current += 1;
-    setResult(null);
-    setRendering(false);
-  };
-
   const selectColor = value => {
     const next = value.toLowerCase();
     if (next === foreground) return;
-    invalidate();
     setForeground(next);
   };
 
@@ -123,7 +115,6 @@ function App() {
     setLogoError('');
     const error = validateLogo(file);
     if (error) { setLogoError(error); setUploading(false); return; }
-    invalidate();
     setUploading(true);
     try {
       const decoded = await loadLogo(file);
@@ -143,7 +134,6 @@ function App() {
 
   const removeLogo = () => {
     uploadGeneration.current += 1;
-    invalidate();
     setUploading(false);
     setLogo(null);
     setLogoName('');
@@ -152,12 +142,12 @@ function App() {
   };
 
   const handleText = (value) => {
-    invalidate();
     setText(value);
     setMessage('');
   };
 
-  const readyResult = result && !result.error && validation.valid && !uploading;
+  const readyResult = result && !result.error && result.inputKey === inputKey && validation.valid && !uploading && !rendering;
+  const showResult = result && !result.error && validation.valid && !uploading;
   const doAction = async (work, successMessage) => {
     if (!readyResult) return;
     try {
@@ -172,7 +162,7 @@ function App() {
     <div className="app-shell">
       <header className="site-header">
         <a className="brand" href="#main" aria-label="Custom QR code generator">
-          <svg className="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect className="mark-tile" x="1" y="1" width="38" height="38" rx="10"/><path d="M9 9h8v8H9zM23 9h8v8h-8zM9 23h8v8H9z" fill="none" stroke="var(--surface)" strokeWidth="2.5"/><path d="M23 23h4v4h4v4h-8zM29 21h3v3h-3z" fill="var(--surface)"/></svg>
+          <img className="brand-mark" src="./qr-mark.svg" alt="" />
           <span>Custom QR</span>
         </a>
         <button className="icon-button theme-toggle" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
@@ -201,12 +191,11 @@ function App() {
               </div>
               {palette.length > 1 && <div className="brand-colors" aria-label="Logo colors">{palette.map(color => <button key={color} type="button" className={`palette-swatch ${foreground.toLowerCase() === color ? 'chosen' : ''}`} style={{'--swatch':color}} aria-label={`Use logo color ${color}`} aria-pressed={foreground.toLowerCase() === color} onClick={() => selectColor(color)}/>)}</div>}
             </div>
-            {lowContrast && <p className="contrast-note" role="status">Use a darker color for easier scanning.</p>}
           </div>
         </section>
         <section className="preview-card" aria-label="QR code preview" aria-busy={rendering || uploading}>
-          <div className={`qr-stage ${!readyResult ? 'empty' : ''}`}>
-            {readyResult ? <img className="qr-image" src={result.dataUrl} alt="Generated QR code"/> : <div className="empty-state"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M15 15h3v3h3v3h-6v-6Zm6 0v3"/></svg><span>{result?.error || (rendering || uploading ? 'Generating…' : 'Enter text or a URL')}</span></div>}
+          <div className={`qr-stage ${!showResult ? 'empty' : ''}`}>
+            {showResult ? <img className="qr-image" src={result.dataUrl} alt="Generated QR code"/> : <div className="empty-state"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M15 15h3v3h3v3h-6v-6Zm6 0v3"/></svg><span>{result?.error || (rendering || uploading ? 'Generating…' : 'Enter text or a URL')}</span></div>}
           </div>
           <div className="action-row">
             <button type="button" className="button button-primary" disabled={!readyResult} onClick={() => doAction(current => downloadQR(current, 'png'), 'PNG downloaded.')}><Icon name="download" size={16}/>Download PNG</button>
