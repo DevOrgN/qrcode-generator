@@ -9,6 +9,7 @@ import {
   shareQR,
   canShareQR,
 } from './lib/qr.js';
+import Footer from './components/Footer.jsx';
 
 function Icon({ name, size = 18, ...props }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, ...props };
@@ -47,6 +48,7 @@ function App() {
   const uploadGeneration = useRef(0);
   const fileInput = useRef(null);
   const actionTimer = useRef(null);
+  const pendingRender = useRef(Promise.resolve(null));
 
   const validation = useMemo(() => validateText(text, logo ? 'H' : 'M'), [text, logo]);
   const inputKey = `${text}\u0000${foreground}\u0000${logo?.dataUrl || ''}`;
@@ -62,9 +64,14 @@ function App() {
   useEffect(() => {
     const ticket = generation.current + 1;
     generation.current = ticket;
+    let settle = () => {};
+    const render = new Promise(resolve => { settle = resolve; });
+    pendingRender.current = render;
+    const done = value => settle({ ticket, value });
     if (!text.trim() || !validation.valid || uploading) {
       setResult(null);
       setRendering(false);
+      done(null);
       return undefined;
     }
 
@@ -77,18 +84,26 @@ function App() {
           errorCorrectionLevel: 'M',
           logo: logo?.dataUrl || null,
         });
+        const output = { ...next, inputKey };
         if (generation.current === ticket) {
-          setResult({ ...next, inputKey });
+          setResult(output);
           setRendering(false);
         }
+        done(output);
       } catch (error) {
+        const failure = error?.message || 'We couldn’t create this QR code.';
         if (generation.current === ticket) {
-          setResult({ error: error?.message || 'We couldn’t create this QR code.' });
+          setResult({ error: failure });
           setRendering(false);
         }
+        done({ error: failure });
       }
     }, 250);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      // The render was superseded; resolve waiters instead of leaving them pending.
+      if (generation.current === ticket) done({ stale: true });
+    };
   }, [text, foreground, logo, uploading, validation.valid]);
 
   useEffect(() => () => {
@@ -143,12 +158,21 @@ function App() {
     setMessage('');
   };
 
-  const readyResult = result && !result.error && result.inputKey === inputKey && validation.valid && !uploading && !rendering;
+  // Buttons stay enabled during the edit debounce so they never flash while
+  // typing; an action instead waits for the pending render to finish.
+  const actionable = result && !result.error && validation.valid && !uploading;
   const showResult = result && !result.error && validation.valid && !uploading;
   const doAction = async (work, successMessage) => {
-    if (!readyResult) return;
+    if (!actionable) return;
+    let target = result;
+    if (target.inputKey !== inputKey || !target.inputKey) {
+      const settled = await pendingRender.current;
+      const pending = settled?.value;
+      if (!pending || pending.stale || pending.error || pending.inputKey !== inputKey) return;
+      target = pending;
+    }
     try {
-      const completed = await work(result);
+      const completed = await work(target);
       if (completed !== false) announce(successMessage);
     } catch (error) {
       announce(error?.message || 'That action couldn’t be completed.');
@@ -195,12 +219,13 @@ function App() {
             {showResult ? <img className="qr-image" src={result.dataUrl} alt="Generated QR code"/> : <div className="empty-state"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M15 15h3v3h3v3h-6v-6Zm6 0v3"/></svg><span>{result?.error || (rendering || uploading ? 'Generating…' : 'Enter text or a URL')}</span></div>}
           </div>
           <div className="action-row">
-            <button type="button" className="button button-primary" disabled={!readyResult} onClick={() => doAction(current => downloadQR(current, 'png'), 'PNG downloaded.')}><Icon name="download" size={16}/>Download PNG</button>
-            <button type="button" className="button button-secondary" disabled={!readyResult} title={nativeSharing ? 'Share PNG with another app' : 'Native image sharing is unavailable. Download the PNG to share it manually.'} onClick={() => doAction(shareQR, 'QR code shared.')}><Icon name="share" size={16}/>Share</button>
+            <button type="button" className="button button-primary" disabled={!actionable} onClick={() => doAction(current => downloadQR(current, 'png'), 'PNG downloaded.')}><Icon name="download" size={16}/>Download PNG</button>
+            <button type="button" className="button button-secondary" disabled={!actionable} title={nativeSharing ? 'Share PNG with another app' : 'Native image sharing is unavailable. Download the PNG to share it manually.'} onClick={() => doAction(shareQR, 'QR code shared.')}><Icon name="share" size={16}/>Share</button>
           </div>
           <p className="status-message" role="status" aria-live="polite">{message}</p>
         </section>
       </main>
+      <Footer />
     </div>
   );
 }
