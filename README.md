@@ -26,7 +26,7 @@ API — nothing is uploaded.
 ```sh
 npm ci
 npm run dev      # http://127.0.0.1:5173
-npm test         # 28 unit tests
+npm test         # 29 unit tests
 npm run check    # tests + production build
 npm run preview  # preview dist/ locally
 ```
@@ -52,5 +52,5 @@ Headers, Electron, and Android instructions: [docs/PLATFORMS.md](docs/PLATFORMS.
 Production-ready as a static app: tests and build pass, security reviewed.
 Native share delivery on a physical phone, camera/print scanning, and
 installer/APK builds still need real-device/toolchain verification. There is
-no tagged release yet and no remote repository configured — see
+no tagged release yet — see
 [docs/RELEASING.md](docs/RELEASING.md) if you want to publish it.
