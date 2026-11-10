@@ -1,5 +1,7 @@
 # Custom QR Code Generator
 
+**[Try it online](https://devorgn.github.io/qrcode-generator/) — or run it locally** (see Quick start).
+
 A private QR code studio that runs entirely on your device. Enter text or a
 URL, optionally add a logo, pick a color, and download a high-resolution PNG
 or share it natively. No accounts, analytics, remote fonts, or QR-generation
