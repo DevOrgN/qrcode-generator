@@ -24,7 +24,8 @@ or QR-generation API.
 - Export size **1024 px**, 4-module quiet zone, white background, `#18181b` foreground by default.
 - Logo: PNG/JPEG only, ≤ 20 MiB, ≤ 16384 px/edge, ≤ 64 MP. Decoded locally, transparent padding cropped, normalized to ≤ 512 px, composited on a compact solid white backing (aspect-ratio aware, max 22 % of the QR edge) so QR modules never show through fine artwork.
 - Colors: dominant logo colors are sampled from original pixels; white/near-white are excluded; the dominant remaining color is auto-selected; an additional palette (up to 5) plus a native picker and hex field let the user override. Gold/yellow brand colors are retained.
-- Exports are disabled until the latest render matches the current input (`readyResult`); stale renders cannot be downloaded or shared.
+- Exports are disabled only when input is invalid or still uploading; exports during the typing debounce wait for the pending render, so buttons never flash while typing.
+- Download and Share take a customizable base file name (default `qr-code`; sanitized for all platforms).
 - Share uses `navigator.share` with a PNG file when available; it never silently copies. Download produces a real PNG via a temporary object URL. A clipboard copy helper exists in `qr.js` but is not wired to a button.
 
 ## Testing

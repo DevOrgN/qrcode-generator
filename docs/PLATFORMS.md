@@ -1,4 +1,17 @@
-# Desktop and Android builds
+# Platforms and deployment
+
+The web app is static with **no backend, database, or server-side runtime** —
+any static HTTPS host works, including a subdirectory (all asset URLs and the
+service-worker scope are relative; `vite` `base: './'`). Both of your options
+work; for this app GitHub Pages is the simpler, free choice. Railway is the
+better fit if you want one platform for the site plus future dynamic services.
+
+| Host | Fit | Notes |
+| --- | --- | --- |
+| **GitHub Pages (recommended)** | Perfect | Free, zero config beyond enabling it on the `master` branch (or a `gh-pages` branch / Pages-ready `dist`). No headers control, but the app does not require them — the CSP suggestions in `docs/SECURITY.md` are optional hardening. |
+| **Railway** | Works | Deploy the `dist/` folder as a static build (nginx/serve image or Railway's static target). More setup for a purely static app; useful if you also need a backend later. |
+
+Both serve over HTTPS, so the service worker (offline support) works on each.
 
 The web app is static. No remote runtime, fonts, analytics, or content are needed.
 

@@ -7,7 +7,8 @@ no tagged releases yet; the unreleased baseline is described below.
 
 - Minimal clean UI: brand mark, text/URL field, optional PNG/JPG logo upload
   (drag & drop supported), auto-selected dominant logo color + palette swatches
-  (white/near-white excluded), QR preview, Download PNG, native Share.
+  (white/near-white excluded), QR preview, Download PNG, native Share — all
+  with a customizable export file name (default `qr-code`).
 - Offline-first static PWA (service worker precache), hardened Electron shell,
   Capacitor Android configuration.
 - 28 unit tests, Electron UI/offline smoke tests, production docs

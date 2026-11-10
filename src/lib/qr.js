@@ -407,10 +407,27 @@ function dataUrlBlob(dataUrl) {
   return new Blob([bytes], { type: mime });
 }
 
-export function downloadQR(result, format = 'png') {
+// Keep only characters that are safe in file names on every platform.
+export function sanitizeFileName(value, fallback = 'qr-code') {
+  const cleaned = String(value ?? '')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*\.\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[.\s]+/, '')
+    .replace(/[.\s]+$/, '')
+    .slice(0, 80);
+  return cleaned || fallback;
+}
+
+export function downloadQR(result, format = 'png', fileName = 'qr-code') {
   if (!result) throw new Error('Create a QR code before downloading.');
   const kind = String(format).toLowerCase();
   if (kind !== 'png' && kind !== 'svg') throw new Error('Unsupported export format. Choose PNG or SVG.');
+  const base = sanitizeFileName(fileName);
   if (kind === 'png') dataUrlBlob(result.dataUrl); // Validate before touching the DOM.
   else if (typeof result.svg !== 'string' || !/<svg[\s>]/i.test(result.svg)) throw new Error('The QR export is invalid. Create the QR code again, then try again.');
   requireBrowserAction('Downloading QR codes');
@@ -419,7 +436,7 @@ export function downloadQR(result, format = 'png') {
   else if (kind === 'svg') { blob = new Blob([result.svg], { type: 'image/svg+xml;charset=utf-8' }); extension = 'svg'; }
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url; link.download = `qr-code.${extension}`; link.style.display = 'none';
+  link.href = url; link.download = `${base}.${extension}`; link.style.display = 'none';
   document.body.appendChild(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -442,14 +459,15 @@ export function canShareQR(result) {
   return true;
 }
 
-export async function shareQR(result) {
+export async function shareQR(result, fileName = 'qr-code') {
   if (!result) throw new Error('Create a QR code before sharing.');
   if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
     throw new Error('Sharing is not supported here. Download the PNG to share it manually.');
   }
   if (typeof File === 'undefined') throw new Error('Sharing image files is not supported here. Download the PNG to share it manually.');
-  const file = new File([dataUrlBlob(result.dataUrl)], 'qr-code.png', { type: 'image/png' });
-  const payload = { title: 'QR code', files: [file] };
+  const name = `${sanitizeFileName(fileName)}.png`;
+  const file = new File([dataUrlBlob(result.dataUrl)], name, { type: 'image/png' });
+  const payload = { title: name, files: [file] };
   try { await navigator.share(payload); return true; }
   catch (error) {
     if (error?.name === 'AbortError') return false;

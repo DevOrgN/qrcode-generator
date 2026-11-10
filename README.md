@@ -17,8 +17,9 @@ API — nothing is uploaded.
 - Defaults that just work: 1024 px PNG, error correction M (H with a logo),
   4-module quiet zone.
 - Download PNG and native Share (opens your phone's app chooser where
-  supported). Light/dark themes, mobile layout, full offline use after the
-  first production visit, PWA-installable.
+  supported), with an editable file name (default `qr-code`). Light/dark
+  themes, mobile layout, full offline use after the first production visit,
+  PWA-installable.
 
 ## Quick start
 

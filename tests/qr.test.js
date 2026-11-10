@@ -13,6 +13,7 @@ import {
   downloadQR,
   copyQR,
   shareQR,
+  sanitizeFileName,
 } from '../src/lib/qr.js';
 
 function pngHeader(width, height) {
@@ -87,6 +88,27 @@ test('export helpers report unavailable and unsupported operations clearly', asy
   await assert.rejects(shareQR({ dataUrl: 'data:image/png;base64,AA==' }), /not supported/i);
   assert.throws(() => downloadQR(null), /Create a QR code/);
   assert.throws(() => downloadQR({ dataUrl: 'data:image/png;base64,AA==', svg: '<svg/>' }, 'webp'), /PNG or SVG/);
+});
+
+test('file names are sanitized for download and share', { skip: typeof File === 'undefined' }, async () => {
+  assert.equal(sanitizeFileName('my brand*logo'), 'my brand logo');
+  assert.equal(sanitizeFileName('  invoice/../2026 . '), 'invoice 2026');
+  assert.equal(sanitizeFileName('??.'), 'qr-code');
+  assert.equal(sanitizeFileName('a'.repeat(120)).length, 80);
+  assert.equal(sanitizeFileName(''), 'qr-code');
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  let shared;
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
+    canShare: () => true,
+    share: async payload => { shared = payload; },
+  } });
+  try {
+    await shareQR({ dataUrl: 'data:image/png;base64,AA==' }, 'my brand*logo');
+    assert.equal(shared.files[0].name, 'my brand logo.png');
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'navigator', previous);
+    else delete globalThis.navigator;
+  }
 });
 
 test('share cancellation is silent when file sharing is available', { skip: typeof File === 'undefined' }, async () => {

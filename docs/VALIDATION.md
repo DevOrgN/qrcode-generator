@@ -15,6 +15,14 @@ Still unverified: native share delivery on a physical phone, camera/print
 scanning, native installer/APK builds. No remote repository is configured, so
 nothing was pushed — see `docs/RELEASING.md`.
 
+## Export naming, stable buttons, footer, favicon — 2026-11-10
+
+Customizable download/share file name (sanitized, default `qr-code`),
+buttons no longer flash while typing (exports await the pending render),
+developer footer linking an org page, fresh `favicon.svg` to defeat stale
+tab-icon caches. 29 unit tests pass; build + UI smoke pass. See README and
+`docs/PLATFORMS.md` for the GitHub Pages vs Railway deployment answer.
+
 ## Readable logo backing — 2026-11-08
 
 Replaced the alpha-only halo with a compact solid white backing matching cropped artwork bounds and aspect ratio. This prevents QR modules appearing through fine lettering. A transparent fine-text fixture was inspected in the browser; its exported PNG decoded to `https://example.com/readable-logo`. Screenshot: `evidence/readable-logo.png`. The original logo source from the user’s example was not supplied. Luna ran the 19-test suite and production build successfully.

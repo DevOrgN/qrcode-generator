@@ -87,7 +87,10 @@ textarea::placeholder { color: var(--muted); }
 .empty-state { display: flex; align-items: center; flex-direction: column; gap: 17px; padding: 20px; color: var(--muted); text-align: center; }
 .empty-state > svg { opacity: .5; }
 .empty-state > span { max-width: 230px; font-size: 11px; line-height: 1.6; }
-.action-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 9px; width: min(100%, 310px); margin: 22px auto 0; }
+.action-row { display: grid; grid-template-columns: 1fr; gap: 9px; width: min(100%, 310px); margin: 22px auto 0; }
+.action-row .button-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 9px; }
+.file-name-field { width: 100%; min-height: 34px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--foreground); font-size: 12px; }
+.file-name-field:focus { border-color: var(--ring); outline: 0; box-shadow: 0 0 0 3px #a1a1aa12; }
 .button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 40px; gap: 7px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 550; white-space: nowrap; transition: background .15s; }
 .button-primary { color: var(--foreground); background: var(--surface); }
 .button-primary:not(:disabled):hover { border-color: var(--ring); }

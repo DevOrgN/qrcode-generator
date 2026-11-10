@@ -8,6 +8,7 @@ import {
   downloadQR,
   shareQR,
   canShareQR,
+  sanitizeFileName,
 } from './lib/qr.js';
 import Footer from './components/Footer.jsx';
 
@@ -44,6 +45,8 @@ function App() {
   const [result, setResult] = useState(null);
   const [rendering, setRendering] = useState(false);
   const [message, setMessage] = useState('');
+  const [fileName, setFileName] = useState('');
+  const fileBase = useMemo(() => sanitizeFileName(fileName), [fileName]);
   const generation = useRef(0);
   const uploadGeneration = useRef(0);
   const fileInput = useRef(null);
@@ -219,8 +222,11 @@ function App() {
             {showResult ? <img className="qr-image" src={result.dataUrl} alt="Generated QR code"/> : <div className="empty-state"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M15 15h3v3h3v3h-6v-6Zm6 0v3"/></svg><span>{result?.error || (rendering || uploading ? 'Generating…' : 'Enter text or a URL')}</span></div>}
           </div>
           <div className="action-row">
-            <button type="button" className="button button-primary" disabled={!actionable} onClick={() => doAction(current => downloadQR(current, 'png'), 'PNG downloaded.')}><Icon name="download" size={16}/>Download PNG</button>
-            <button type="button" className="button button-secondary" disabled={!actionable} title={nativeSharing ? 'Share PNG with another app' : 'Native image sharing is unavailable. Download the PNG to share it manually.'} onClick={() => doAction(shareQR, 'QR code shared.')}><Icon name="share" size={16}/>Share</button>
+            <input className="file-name-field" type="text" value={fileName} onChange={event => setFileName(event.target.value)} placeholder="File name (qr-code)" aria-label="Download file name" maxLength={80} spellCheck={false}/>
+            <div className="button-row">
+              <button type="button" className="button button-primary" disabled={!actionable} onClick={() => doAction(current => downloadQR(current, 'png', fileBase), `${fileBase}.png downloaded.`)}><Icon name="download" size={16}/>Download PNG</button>
+              <button type="button" className="button button-secondary" disabled={!actionable} title={nativeSharing ? 'Share PNG with another app' : 'Native image sharing is unavailable. Download the PNG to share it manually.'} onClick={() => doAction(current => shareQR(current, fileBase), 'QR code shared.')}><Icon name="share" size={16}/>Share</button>
+            </div>
           </div>
           <p className="status-message" role="status" aria-live="polite">{message}</p>
         </section>
